@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(uuid())
+  name     String
+  phone    String @unique
+  email    String @unique
+  password String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  retailer    Retailer?
+  distributor Distributor?
+}
+
+model Retailer {
+  id       String @id @default(uuid())
+  shopName String
+
+  userId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  locations Location[]
+  orders    Order[]
+}
+
+model Distributor {
+  id           String  @id @default(uuid())
+  businessName String
+  contactInfo  String?
+
+  userId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User                 @relation(fields: [userId], references: [id])
+  locations Location[]
+  distributorProducts DistributorProduct[]
+}
+
+model Location {
+  id        String @id @default(uuid())
+  address   String
+  city      String
+  latitude  Float
+  longitude Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  retailerId    String?
+  distributorId String?
+
+  retailer    Retailer?    @relation(fields: [retailerId], references: [id])
+  distributor Distributor? @relation(fields: [distributorId], references: [id])
+}
+
+model Product {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  brand       String
+  category    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  distributorProducts DistributorProduct[]
+  
+  @@index([category])
+}
+
+model DistributorProduct {
+  id        String   @id @default(uuid())
+  price     Decimal
+  stock     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  distributorId String
+  productId     String
+
+  distributor Distributor @relation(fields: [distributorId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
+
+  orderItems OrderItem[]
+
+  @@unique([distributorId, productId])
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  date        DateTime    @default(now())
+  totalAmount Decimal
+  status      OrderStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  retailerId String
+  retailer   Retailer @relation(fields: [retailerId], references: [id])
+
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  unitPrice Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderId              String
+  distributorProductId String
+
+  order              Order              @relation(fields: [orderId], references: [id])
+  distributorProduct DistributorProduct @relation(fields: [distributorProductId], references: [id])
+}
