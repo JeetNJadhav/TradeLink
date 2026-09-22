@@ -40,7 +40,6 @@ export const getDistributorProductsHandler = async (
   const { distributorId } = request.params as { distributorId: string };
 
   const products = await getDistributorProducts(distributorId);
-  console.log("Products ----------->", products);
 
   return successResponse(h, {
     products,
@@ -57,8 +56,6 @@ export const getDistributorProductByIdHandler = async (
 
   const distributorProduct =
     await getDistributorProductById(distributorProductId);
-
-  console.log("distributorProduct", distributorProduct);
 
   return successResponse(h, {
     distributorProduct,

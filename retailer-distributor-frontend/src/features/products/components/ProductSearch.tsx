@@ -22,10 +22,10 @@ const ProductSearch = ({ onSearch }: ProductSearchProps) => {
     useProductSuggestions(debouncedValue);
 
   const handleSuggestionClick = (suggestion: ProductSuggestion) => {
-    setSearch(suggestion.productName);
+    setSearch(suggestion.label);
     setShowSuggestions(false);
 
-    onSearch(suggestion.productName);
+    onSearch(suggestion.label);
   };
 
   return (
