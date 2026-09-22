@@ -17,8 +17,6 @@ const useProductSearch = () => {
         query,
       });
 
-      console.log("2 resp", response);
-
       setProducts(response.data.products);
     } catch {
       setError("Failed to search products");

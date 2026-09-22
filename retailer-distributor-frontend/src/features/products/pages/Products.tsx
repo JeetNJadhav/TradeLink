@@ -4,7 +4,6 @@ import useProductSearch from "../hooks/useProductSearch";
 
 const Products = () => {
   const { products, loading, error, search } = useProductSearch();
-  console.log("Products", products);
 
   return (
     <div className="products">

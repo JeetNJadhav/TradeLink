@@ -32,3 +32,19 @@ export const getDistributorProducts = async (distributorId: string) => {
     },
   });
 };
+
+export const getDistributorProductById = async (id: string) => {
+  return prisma.distributorProduct.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      product: true,
+      distributor: {
+        include: {
+          locations: true,
+        },
+      },
+    },
+  });
+};
