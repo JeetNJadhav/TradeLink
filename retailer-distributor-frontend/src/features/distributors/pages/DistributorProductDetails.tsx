@@ -4,6 +4,7 @@ import {
   getDistributorProductById,
   getDistributorProducts,
 } from "../services/distributorService";
+import { createOrder } from "../../products/services/orderService";
 
 const DistributorProductDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,10 @@ const DistributorProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(true);
   const [error, setError] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState("");
+  const [orderError, setOrderError] = useState("");
 
   const distributorId = location.state?.distributorId;
 
@@ -107,6 +112,91 @@ const DistributorProductDetails = () => {
             <span>Quantity</span>
 
             <div className="quantity-control">
+              <button
+                type="button"
+                onClick={() =>
+                  setQuantity((current) => Math.max(1, current - 1))
+                }
+                disabled={placingOrder || quantity <= 1}
+              >
+                -
+              </button>
+              <span>{quantity}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setQuantity((current) =>
+                    Math.min(productDetailsData.stock, current + 1),
+                  )
+                }
+                disabled={placingOrder || quantity >= productDetailsData.stock}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <button
+            className="add-to-cart-button"
+            type="button"
+            disabled={
+              placingOrder ||
+              productDetailsData.stock <= 0 ||
+              quantity > productDetailsData.stock
+            }
+            onClick={async () => {
+              try {
+                setPlacingOrder(true);
+                setOrderSuccess("");
+                setOrderError("");
+
+                await createOrder({
+                  distributorId: productDetailsData.distributor.id,
+                  items: [
+                    {
+                      productId: productDetailsData.product.id,
+                      quantity,
+                    },
+                  ],
+                });
+
+                setOrderSuccess("Order placed successfully.");
+              } catch (error) {
+                setOrderError(
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to place order.",
+                );
+              } finally {
+                setPlacingOrder(false);
+              }
+            }}
+          >
+            {placingOrder ? "Placing Order..." : "Place Order"}
+          </button>
+
+          {orderSuccess && <p className="order-success">{orderSuccess}</p>}
+          {orderError && <p className="order-error">{orderError}</p>}
+        </section>
+        {/* <section className="product-info">
+          <h2>Product Details</h2>
+
+          <div className="price-stock">
+            <div>
+              <span className="label">Price</span>
+              <span className="price">₹{productDetailsData.price}</span>
+            </div>
+
+            <div>
+              <span className="label">Available Stock</span>
+              <span className="stock">{productDetailsData.stock}</span>
+            </div>
+          </div>
+
+          <div className="quantity-section">
+            <span>Quantity</span>
+
+            <div className="quantity-control">
               <button>-</button>
               <span>1</span>
               <button>+</button>
@@ -114,7 +204,7 @@ const DistributorProductDetails = () => {
           </div>
 
           <button className="add-to-cart-button">Add to Cart</button>
-        </section>
+        </section> */}
 
         {/* Distributor */}
         <section className="distributor-info">
