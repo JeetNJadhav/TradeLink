@@ -22,9 +22,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
       <p>Distributor: {product.distributorName}</p>
 
-      <p>Price: ₹{product.price}</p>
+      <p>Price: ₹{product.price} per unit</p>
 
-      <p>Stock: {product.stock}</p>
+      <p>Stock: {product.stock} units</p>
     </div>
   );
 };
