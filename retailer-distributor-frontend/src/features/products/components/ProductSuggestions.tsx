@@ -32,11 +32,11 @@ const ProductSuggestions = ({
       {suggestions.map((suggestion) => (
         <button
           type="button"
-          key={suggestion.productId}
+          key={`${suggestion.type}:${suggestion.id}`}
           className="suggestion-item"
           onClick={() => onSelect(suggestion)}
         >
-          {suggestion.productName}
+          {suggestion.label}
         </button>
       ))}
     </div>

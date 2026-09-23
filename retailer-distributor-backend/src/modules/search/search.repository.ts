@@ -22,6 +22,7 @@ export interface ProductSearchParams {
   sortBy?: "relevance" | "nearest";
 }
 
+// This is our abstraction.
 export interface SearchRepository {
   indexProductDistributor(document: SearchDocument): Promise<void>;
 
@@ -30,9 +31,10 @@ export interface SearchRepository {
   getProductSuggestions(query: string): Promise<ProductSuggestion[]>;
 }
 
-export interface ProductSuggestion {
-  productId: string;
-  productName: string;
-}
+export type SuggestionType = "product" | "brand" | "distributor";
 
-// This is our abstraction.
+export interface ProductSuggestion {
+  type: SuggestionType;
+  id: string;
+  label: string;
+}

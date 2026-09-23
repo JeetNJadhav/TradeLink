@@ -19,7 +19,10 @@ export interface ProductSearchResult {
   updatedAt: string;
 }
 
+export type SuggestionType = "product" | "brand" | "distributor";
+
 export interface ProductSuggestion {
-  productId: string;
-  productName: string;
+  type: SuggestionType;
+  id: string;
+  label: string;
 }

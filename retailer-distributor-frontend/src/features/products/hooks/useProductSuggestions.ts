@@ -24,6 +24,7 @@ const useProductSuggestions = (search: string) => {
       setLoading(true);
       const getSuggestions = async () => {
         const response = await getProductSuggestions(query, controller.signal);
+        console.log("FE response", response);
 
         if (!controller.signal.aborted) {
           setSuggestions(response.data.suggestions);
