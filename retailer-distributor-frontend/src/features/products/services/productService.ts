@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL;
+import { PRODUCT_SEARCH_API, PRODUCT_SUGGESTIONS_API } from "../../../shared/api/api";
+import apiClient from "../../../shared/api/apiClient";
+import type { ProductSearchResult, ProductSuggestion } from "../types/productSearch";
 
 export interface ProductSearchParams {
   query: string;
@@ -7,57 +9,32 @@ export interface ProductSearchParams {
   sortBy?: "relevance" | "nearest";
 }
 
-export const searchProducts = async ({
-  query,
-  latitude,
-  longitude,
-  sortBy,
-}: ProductSearchParams) => {
-  const params = new URLSearchParams();
+interface ProductSearchResponse {
+  success: boolean;
+  data: { products: ProductSearchResult[] };
+}
 
-  params.set("q", query);
+interface ProductSuggestionsResponse {
+  success: boolean;
+  data: { suggestions: ProductSuggestion[] };
+}
 
-  if (latitude !== undefined) {
-    params.set("latitude", latitude.toString());
-  }
+export const searchProducts = async ({ query, latitude, longitude, sortBy }: ProductSearchParams) => {
+  const params = new URLSearchParams({ q: query });
+  if (latitude !== undefined) params.set("latitude", latitude.toString());
+  if (longitude !== undefined) params.set("longitude", longitude.toString());
+  if (sortBy) params.set("sortBy", sortBy);
 
-  if (longitude !== undefined) {
-    params.set("longitude", longitude.toString());
-  }
-
-  if (sortBy) {
-    params.set("sortBy", sortBy);
-  }
-
-  const response = await fetch(
-    `${API_URL}/products/search?${params.toString()}`,
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to search products");
-  }
-
-  return response.json();
+  const response = await apiClient.get<ProductSearchResponse>(PRODUCT_SEARCH_API, {
+    params: Object.fromEntries(params),
+  });
+  return response.data;
 };
 
-export const getProductSuggestions = async (
-  query: string,
-  signal?: AbortSignal,
-) => {
-  const params = new URLSearchParams({
-    q: query,
+export const getProductSuggestions = async (query: string, signal?: AbortSignal) => {
+  const response = await apiClient.get<ProductSuggestionsResponse>(PRODUCT_SUGGESTIONS_API, {
+    params: { q: query },
+    signal,
   });
-
-  const response = await fetch(
-    `${API_URL}/products/suggestions?${params.toString()}`,
-    {
-      signal,
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch product suggestions");
-  }
-
-  return response.json();
+  return response.data;
 };

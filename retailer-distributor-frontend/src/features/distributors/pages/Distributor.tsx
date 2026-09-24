@@ -2,25 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getDistributorProducts } from "../services/distributorService";
 
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  brand?: string;
-  category?: string;
-}
-
-interface DistributorProduct {
-  id: string;
-  price: string;
-  stock: number;
-  product: Product;
-}
+import type { DistributorProductItem } from "../types/distributor";
 
 export const Distributor = () => {
   const { distributorId } = useParams<{ distributorId: string }>();
 
-  const [products, setProducts] = useState<DistributorProduct[]>([]);
+  const [products, setProducts] = useState<DistributorProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

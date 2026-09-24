@@ -24,6 +24,24 @@ model User {
 
   retailer    Retailer?
   distributor Distributor?
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id                String        @id @default(uuid())
+  tokenHash         String        @unique
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?       @unique
+  createdAt         DateTime      @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  replacedBy     RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedByTokenId], references: [id])
+  replacedFrom   RefreshToken? @relation("RefreshTokenReplacement")
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Retailer {
