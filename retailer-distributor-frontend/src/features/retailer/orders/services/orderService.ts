@@ -1,5 +1,5 @@
-import { CREATE_ORDER_API } from "../../../shared/api/api";
-import apiClient from "../../../shared/api/apiClient";
+import { CREATE_ORDER_API } from "../../../../shared/api/api";
+import apiClient from "../../../../shared/api/apiClient";
 import type { CreateOrderRequest } from "../types/order";
 
 export const createOrder = async (payload: CreateOrderRequest) => {

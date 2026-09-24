@@ -2,8 +2,8 @@ import {
   DISTRIBUTOR_API,
   DISTRIBUTOR_PRODUCT_DETAILS_API,
   DISTRIBUTOR_PRODUCTS_API,
-} from "../../../shared/api/api";
-import apiClient from "../../../shared/api/apiClient";
+} from "../../../../shared/api/api";
+import apiClient from "../../../../shared/api/apiClient";
 import type {
   DistributorProductDetailsResponse,
   DistributorProductsResponse,

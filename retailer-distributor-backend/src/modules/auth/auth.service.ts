@@ -38,14 +38,19 @@ const toAuthenticatedUser = (user: {
 
 export const login = async (email: string, password: string) => {
   const user = await findUserByEmail(email);
+
   if (!user || !(await verifyPassword(password, user.password)))
     throw new AuthError("Invalid email or password");
+
   const authenticatedUser = toAuthenticatedUser(user);
+
   const accessToken = createAccessToken(
     authenticatedUser.userId,
     authenticatedUser.role,
   );
+
   const refresh = await createRefreshSession(authenticatedUser.userId);
+
   return { accessToken, refreshToken: refresh.token, authenticatedUser };
 };
 

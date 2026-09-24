@@ -1,5 +1,5 @@
-import { PRODUCT_SEARCH_API, PRODUCT_SUGGESTIONS_API } from "../../../shared/api/api";
-import apiClient from "../../../shared/api/apiClient";
+import { PRODUCT_SEARCH_API, PRODUCT_SUGGESTIONS_API } from "../../../../shared/api/api";
+import apiClient from "../../../../shared/api/apiClient";
 import type { ProductSearchResult, ProductSuggestion } from "../types/productSearch";
 
 export interface ProductSearchParams {
