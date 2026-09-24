@@ -21,24 +21,10 @@ export class OrderError extends Error {
   }
 }
 
-const getDevelopmentRetailerId = (): string => {
-  const retailerId = process.env.DEV_RETAILER_ID;
-
-  if (!retailerId) {
-    throw new OrderError("DEV_RETAILER_ID is not configured", 500);
-  }
-
-  // TEMPORARY MVP DEVELOPMENT CONTEXT:
-  // Authentication/authorization is intentionally not implemented in Step 1.
-  // After auth is implemented, replace this with the authenticated retailer's
-  // identity from the request/auth context. Do not accept retailerId from the
-  // frontend request body.
-  return retailerId;
-};
-
-export const createOrder = async (input: CreateOrderInput) => {
-  const retailerId = getDevelopmentRetailerId();
-
+export const createOrder = async (
+  retailerId: string,
+  input: CreateOrderInput,
+) => {
   if (input.items.length === 0) {
     throw new OrderError("At least one order item is required", 400);
   }

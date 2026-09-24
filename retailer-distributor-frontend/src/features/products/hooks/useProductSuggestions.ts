@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import type { ProductSuggestion } from "../types/productSearch";
 import { getProductSuggestions } from "../services/productService";
 
@@ -11,7 +10,6 @@ const useProductSuggestions = (search: string) => {
 
   useEffect(() => {
     const query = search.trim();
-
     if (query.length < MIN_SEARCH_LENGTH) {
       setSuggestions([]);
       setLoading(false);
@@ -19,36 +17,27 @@ const useProductSuggestions = (search: string) => {
     }
 
     const controller = new AbortController();
+    setLoading(true);
 
-    try {
-      setLoading(true);
-      const getSuggestions = async () => {
+    const loadSuggestions = async () => {
+      try {
         const response = await getProductSuggestions(query, controller.signal);
-        console.log("FE response", response);
-
+        if (!controller.signal.aborted) setSuggestions(response.data.suggestions);
+      } catch (error) {
         if (!controller.signal.aborted) {
-          setSuggestions(response.data.suggestions);
+          console.error("Failed to fetch suggestions", error);
+          setSuggestions([]);
         }
-      };
-      getSuggestions();
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        console.error("Failed to fetch suggestions", error);
-        setSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
+    };
 
+    void loadSuggestions();
     return () => controller.abort();
   }, [search]);
 
-  return {
-    suggestions,
-    loading,
-  };
+  return { suggestions, loading };
 };
 
 export default useProductSuggestions;

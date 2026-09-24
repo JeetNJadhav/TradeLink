@@ -1,25 +1,14 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Products from "../features/products/pages/Products";
-import DistributorProductDetails from "../features/distributors/pages/DistributorProductDetails";
-import Distributor from "../features/distributors/pages/Distributor";
-
-// import HomePage from "./pages/HomePage";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "../features/auth/context/AuthContext";
+import { AppRoutes } from "./routes";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Products />} />
-        <Route
-          path="/distributor-products/:id"
-          element={<DistributorProductDetails />}
-        />
-        <Route
-          path="/distributors/:distributorId/products"
-          element={<Distributor />}
-        />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

@@ -4,17 +4,22 @@ import {
   getDistributorProductById,
   getDistributorProducts,
 } from "../services/distributorService";
-import { createOrder } from "../../products/services/orderService";
+import { createOrder } from "../../orders/services/orderService";
+import type {
+  DistributorProductDetails,
+  DistributorProductItem,
+} from "../types/distributor";
 
 const DistributorProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [productDetailsData, setProductDetailsData] = useState<any>(null);
-  const [distributorProductsData, setDistributorProductsData] = useState<any[]>(
-    [],
-  );
+  const [productDetailsData, setProductDetailsData] =
+    useState<DistributorProductDetails | null>(null);
+  const [distributorProductsData, setDistributorProductsData] = useState<
+    DistributorProductItem[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(true);
   const [error, setError] = useState("");
@@ -23,10 +28,16 @@ const DistributorProductDetails = () => {
   const [orderSuccess, setOrderSuccess] = useState("");
   const [orderError, setOrderError] = useState("");
 
-  const distributorId = location.state?.distributorId;
+  const distributorId = (location.state as { distributorId?: string } | null)
+    ?.distributorId;
 
   useEffect(() => {
-    if (!id || !distributorId) return;
+    if (!id || !distributorId) {
+      setError("Distributor information is missing.");
+      setLoading(false);
+      setLoadingMoreProducts(false);
+      return;
+    }
 
     const fetchDetails = async () => {
       try {

@@ -22,25 +22,16 @@ export const getProductDistributorsHandler = async (
 
 export const searchProducts = async (request: Request, h: ResponseToolkit) => {
   const { q, latitude, longitude, sortBy } = request.query as {
-    q?: string;
-    latitude?: string;
-    longitude?: string;
+    q: string;
+    latitude?: number;
+    longitude?: number;
     sortBy?: "relevance" | "nearest";
   };
 
-  if (!q?.trim()) {
-    return h
-      .response({
-        success: false,
-        message: "Search query is required",
-      })
-      .code(400);
-  }
-
   const results = await searchService.searchProducts({
     query: q,
-    latitude: latitude ? Number(latitude) : undefined,
-    longitude: longitude ? Number(longitude) : undefined,
+    latitude,
+    longitude,
     sortBy,
   });
 

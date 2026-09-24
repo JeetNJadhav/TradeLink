@@ -13,10 +13,8 @@ const ProductSearch = ({ onSearch }: ProductSearchProps) => {
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const debouncedValue = useProductSearchDebounce(
-    search,
-    import.meta.env.SUGGESTION_DEBOUNCE,
-  );
+  const suggestionDebounce = Number(import.meta.env.VITE_SUGGESTION_DEBOUNCE ?? 300);
+  const debouncedValue = useProductSearchDebounce(search, suggestionDebounce);
 
   const { suggestions, loading: searchingSuggestions } =
     useProductSuggestions(debouncedValue);
