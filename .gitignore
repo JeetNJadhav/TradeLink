@@ -39,3 +39,4 @@ Thumbs.db
 
 # Local database / cache
 *.local
+*.dump

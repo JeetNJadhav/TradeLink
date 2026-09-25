@@ -21,20 +21,13 @@ export class AuthError extends Error {
   }
 }
 
-const getUserRole = (user: {
-  retailer: unknown;
-  distributor: unknown;
-}): Role => {
-  if (user.retailer) return "RETAILER";
-  if (user.distributor) return "DISTRIBUTOR";
-  throw new AuthError("User has no application role", 403);
-};
-
 const toAuthenticatedUser = (user: {
   id: string;
-  retailer: unknown;
-  distributor: unknown;
-}): AuthenticatedUser => ({ userId: user.id, role: getUserRole(user) });
+  role: Role;
+}): AuthenticatedUser => ({
+  userId: user.id,
+  role: user.role,
+});
 
 export const login = async (email: string, password: string) => {
   const user = await findUserByEmail(email);
@@ -42,7 +35,10 @@ export const login = async (email: string, password: string) => {
   if (!user || !(await verifyPassword(password, user.password)))
     throw new AuthError("Invalid email or password");
 
-  const authenticatedUser = toAuthenticatedUser(user);
+  const authenticatedUser = toAuthenticatedUser({
+    id: user.id,
+    role: user.role,
+  });
 
   const accessToken = createAccessToken(
     authenticatedUser.userId,
@@ -68,7 +64,10 @@ export const refresh = async (rawRefreshToken: string) => {
   }
   const user = await findUserById(session.userId);
   if (!user) throw new AuthError("User no longer exists");
-  const authenticatedUser = toAuthenticatedUser(user);
+  const authenticatedUser = toAuthenticatedUser({
+    id: user.id,
+    role: user.role,
+  });
   try {
     const rotated = await rotateRefreshSession(session.id, session.userId);
     return {
@@ -102,6 +101,6 @@ export const getCurrentUser = async (authenticatedUser: AuthenticatedUser) => {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    role: getUserRole(user),
+    role: user.role,
   };
 };

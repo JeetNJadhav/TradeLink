@@ -4,13 +4,11 @@ import { createRefreshToken, hashRefreshToken } from "./token.service";
 export const findUserByEmail = async (email: string) =>
   prisma.user.findUnique({
     where: { email: email.toLowerCase() },
-    include: { retailer: true, distributor: true },
   });
 
 export const findUserById = async (userId: string) =>
   prisma.user.findUnique({
     where: { id: userId },
-    include: { retailer: true, distributor: true },
   });
 
 export const createRefreshSession = async (userId: string) => {
