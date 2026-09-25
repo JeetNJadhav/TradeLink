@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -13,18 +8,17 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(uuid())
-  name     String
-  phone    String @unique
-  email    String @unique
-  password String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  retailer    Retailer?
-  distributor Distributor?
+  id            String         @id @default(uuid())
+  name          String
+  phone         String         @unique
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  role          UserRole
+  distributor   Distributor?
   refreshTokens RefreshToken[]
+  retailer      Retailer?
 }
 
 model RefreshToken {
@@ -34,93 +28,108 @@ model RefreshToken {
   revokedAt         DateTime?
   replacedByTokenId String?       @unique
   createdAt         DateTime      @default(now())
-
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
-  replacedBy     RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedByTokenId], references: [id])
-  replacedFrom   RefreshToken? @relation("RefreshTokenReplacement")
+  userId            String
+  replacedBy        RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedByTokenId], references: [id])
+  replacedFrom      RefreshToken? @relation("RefreshTokenReplacement")
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model Retailer {
-  id       String @id @default(uuid())
-  shopName String
-
-  userId String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User       @relation(fields: [userId], references: [id])
+  id        String     @id @default(uuid())
+  shopName  String
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   locations Location[]
   orders    Order[]
+  user      User       @relation(fields: [userId], references: [id])
 }
 
 model Distributor {
-  id           String  @id @default(uuid())
-  businessName String
-  contactInfo  String?
-
-  userId String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User                 @relation(fields: [userId], references: [id])
-  locations Location[]
+  id                  String               @id @default(uuid())
+  businessName        String
+  contactInfo         String?
+  userId              String               @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  user                User                 @relation(fields: [userId], references: [id])
   distributorProducts DistributorProduct[]
+  locations           Location[]
 }
 
 model Location {
-  id        String @id @default(uuid())
-  address   String
-  city      String
-  latitude  Float
-  longitude Float
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id            String       @id @default(uuid())
+  address       String
+  city          String
+  latitude      Float
+  longitude     Float
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   retailerId    String?
   distributorId String?
-
-  retailer    Retailer?    @relation(fields: [retailerId], references: [id])
-  distributor Distributor? @relation(fields: [distributorId], references: [id])
+  distributor   Distributor? @relation(fields: [distributorId], references: [id])
+  retailer      Retailer?    @relation(fields: [retailerId], references: [id])
 }
 
 model Product {
-  id          String  @id @default(uuid())
-  name        String
-  description String?
-  brand       String
-  category    String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id                  String               @id @default(uuid())
+  name                String
+  description         String?
+  brand               String
+  category            String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   distributorProducts DistributorProduct[]
-  
+
   @@index([category])
 }
 
 model DistributorProduct {
-  id        String   @id @default(uuid())
-  price     Decimal
-  stock     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id            String      @id @default(uuid())
+  price         Decimal
+  stock         Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   distributorId String
   productId     String
-
-  distributor Distributor @relation(fields: [distributorId], references: [id])
-  product     Product     @relation(fields: [productId], references: [id])
-
-  orderItems OrderItem[]
+  distributor   Distributor @relation(fields: [distributorId], references: [id])
+  product       Product     @relation(fields: [productId], references: [id])
+  orderItems    OrderItem[]
 
   @@unique([distributorId, productId])
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  date        DateTime    @default(now())
+  totalAmount Decimal
+  status      OrderStatus
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  retailerId  String
+  retailer    Retailer    @relation(fields: [retailerId], references: [id])
+  orderItems  OrderItem[]
+}
+
+model OrderItem {
+  id                   String             @id @default(uuid())
+  quantity             Int
+  unitPrice            Decimal
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  orderId              String
+  distributorProductId String
+  distributorProduct   DistributorProduct @relation(fields: [distributorProductId], references: [id])
+  order                Order              @relation(fields: [orderId], references: [id])
+}
+
+enum UserRole {
+  RETAILER
+  DISTRIBUTOR
+  ADMIN
 }
 
 enum OrderStatus {
@@ -131,34 +140,4 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
-}
-
-model Order {
-  id          String      @id @default(uuid())
-  date        DateTime    @default(now())
-  totalAmount Decimal
-  status      OrderStatus
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  retailerId String
-  retailer   Retailer @relation(fields: [retailerId], references: [id])
-
-  orderItems OrderItem[]
-}
-
-model OrderItem {
-  id        String  @id @default(uuid())
-  quantity  Int
-  unitPrice Decimal
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  orderId              String
-  distributorProductId String
-
-  order              Order              @relation(fields: [orderId], references: [id])
-  distributorProduct DistributorProduct @relation(fields: [distributorProductId], references: [id])
 }
