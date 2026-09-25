@@ -4,7 +4,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import {
@@ -27,16 +26,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // const initialRedirectAttempted = useRef(false);
 
   const refreshUser = useCallback(async () => {
     try {
-      // if (!initialRedirectAttempted) {
       const response = await refreshRequest();
       const authenticatedUser = response.data.user;
       setUser(authenticatedUser);
       return authenticatedUser;
-      // }
     } catch {
       setUser(null);
       return null;

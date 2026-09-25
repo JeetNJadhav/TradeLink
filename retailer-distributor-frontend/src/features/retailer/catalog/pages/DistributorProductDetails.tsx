@@ -189,33 +189,6 @@ const DistributorProductDetails = () => {
           {orderSuccess && <p className="order-success">{orderSuccess}</p>}
           {orderError && <p className="order-error">{orderError}</p>}
         </section>
-        {/* <section className="product-info">
-          <h2>Product Details</h2>
-
-          <div className="price-stock">
-            <div>
-              <span className="label">Price</span>
-              <span className="price">₹{productDetailsData.price}</span>
-            </div>
-
-            <div>
-              <span className="label">Available Stock</span>
-              <span className="stock">{productDetailsData.stock}</span>
-            </div>
-          </div>
-
-          <div className="quantity-section">
-            <span>Quantity</span>
-
-            <div className="quantity-control">
-              <button>-</button>
-              <span>1</span>
-              <button>+</button>
-            </div>
-          </div>
-
-          <button className="add-to-cart-button">Add to Cart</button>
-        </section> */}
 
         {/* Distributor */}
         <section className="distributor-info">

@@ -2,9 +2,10 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AuthHeader } from "../features/auth/components/AuthHeader";
 import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
 import Login from "../features/auth/pages/Login";
-import Distributor from "../features/distributors/pages/Distributor";
-import DistributorProductDetails from "../features/distributors/pages/DistributorProductDetails";
-import Products from "../features/products/pages/Products";
+import Distributor from "../features/retailer/catalog/pages/Distributor";
+
+import Products from "../features/retailer/catalog/pages/Products";
+import DistributorProductDetails from "../features/retailer/catalog/pages/DistributorProductDetails";
 
 const AuthenticatedLayout = () => (
   <>
