@@ -1,50 +1,19 @@
-import { prisma } from "../../infrastructure/prisma/prisma.client";
+import type { DistributorRepository } from "./distributor.repository";
 
-export const getDistributors = async () => {
-  return prisma.distributor.findMany({
-    include: {
-      locations: true,
-    },
-  });
-};
+// functional dependency injection not class like product module or search module
+export type DistributorService = ReturnType<typeof createDistributorService>;
 
-export const getDistributorById = async (id: string) => {
-  return prisma.distributor.findUnique({
-    where: { id },
-    include: {
-      locations: true,
-      distributorProducts: {
-        include: {
-          product: true,
-        },
-      },
-    },
-  });
-};
+export const createDistributorService = (
+  distributorRepository: DistributorRepository,
+) => ({
+  getDistributors: () => distributorRepository.getDistributors(),
 
-export const getDistributorProducts = async (distributorId: string) => {
-  return prisma.distributorProduct.findMany({
-    where: {
-      distributorId,
-    },
-    include: {
-      product: true,
-    },
-  });
-};
+  getDistributorById: (id: string) =>
+    distributorRepository.getDistributorById(id),
 
-export const getDistributorProductById = async (id: string) => {
-  return prisma.distributorProduct.findUnique({
-    where: {
-      id,
-    },
-    include: {
-      product: true,
-      distributor: {
-        include: {
-          locations: true,
-        },
-      },
-    },
-  });
-};
+  getDistributorProducts: (distributorId: string) =>
+    distributorRepository.getDistributorProducts(distributorId),
+
+  getDistributorProductById: (id: string) =>
+    distributorRepository.getDistributorProductById(id),
+});

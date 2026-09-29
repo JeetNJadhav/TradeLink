@@ -1,34 +1,37 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
-import { getDistributorProductById } from "./distributor.service";
+
+import {
+  createDistributorService,
+  DistributorService,
+} from "./distributor.service";
 import { successResponse } from "../../utils/response";
 
-import { getDistributorProducts } from "./distributor.service";
+export const createGetDistributorProductsHandler =
+  (distributorService: DistributorService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { distributorId } = request.params as {
+      distributorId: string;
+    };
 
-export const getDistributorProductsHandler = async (
-  request: Request,
-  h: ResponseToolkit,
-) => {
-  const { distributorId } = request.params as { distributorId: string };
+    const products =
+      await distributorService.getDistributorProducts(distributorId);
 
-  const products = await getDistributorProducts(distributorId);
-
-  return successResponse(h, {
-    products,
-  });
-};
-
-export const getDistributorProductByIdHandler = async (
-  request: Request,
-  h: ResponseToolkit,
-) => {
-  const { distributorProductId } = request.params as {
-    distributorProductId: string;
+    return successResponse(h, {
+      products,
+    });
   };
 
-  const distributorProduct =
-    await getDistributorProductById(distributorProductId);
+export const createGetDistributorProductByIdHandler =
+  (distributorService: DistributorService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { distributorProductId } = request.params as {
+      distributorProductId: string;
+    };
 
-  return successResponse(h, {
-    distributorProduct,
-  });
-};
+    const distributorProduct =
+      await distributorService.getDistributorProductById(distributorProductId);
+
+    return successResponse(h, {
+      distributorProduct,
+    });
+  };

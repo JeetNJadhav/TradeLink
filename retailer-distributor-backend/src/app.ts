@@ -8,16 +8,26 @@ import { registerAuthRoutes } from "./modules/auth/auth.routes";
 
 import { SearchService } from "./modules/search/search.service";
 import { OpenSearchRepository } from "./infrastructure/opensearch/repositories/opensearch.repository";
-import { PrismaDistributorProductRepository } from "./infrastructure/prisma/repositories/distributorProduct.repository";
+import { PrismaDistributorProductRepository } from "./infrastructure/prisma/repositories/distributorProduct.repository.prisma";
 
 import { ProductService } from "./modules/product/product.service";
 import { prisma } from "./infrastructure/prisma/prisma.client";
+import { PrismaDistributorRepository } from "./infrastructure/prisma/repositories/distributor.repository.prisma";
+import { createDistributorService } from "./modules/distributor/distributor.service";
+import {
+  createGetDistributorProductByIdHandler,
+  createGetDistributorProductsHandler,
+} from "./modules/distributor/distributor.controller";
 
 const createApp = async (): Promise<Hapi.Server> => {
   const searchRepository = new OpenSearchRepository();
   const searchService = new SearchService(searchRepository);
   const productRepository = new PrismaDistributorProductRepository(prisma);
   const productService = new ProductService(productRepository);
+
+  const distributorRepository = new PrismaDistributorRepository();
+  // Using functional DI here to compare it with the class-based approach used by other services.
+  const distributorService = createDistributorService(distributorRepository);
 
   const server = Hapi.server({
     port: 3000,
@@ -52,7 +62,7 @@ const createApp = async (): Promise<Hapi.Server> => {
 
   registerAuthRoutes(server);
   registerProductRoutes(server, searchService, productService);
-  registerDistributorRoutes(server);
+  registerDistributorRoutes(server, distributorService);
   registerOrderRoutes(server);
 
   return server;
