@@ -1,16 +1,9 @@
-import { prisma } from "../../config/prisma";
+import { ProductRepository } from "./product.repository";
 
-export const getProductDistributors = async (productId: string) => {
-  return prisma.distributorProduct.findMany({
-    where: {
-      productId,
-    },
-    include: {
-      distributor: {
-        include: {
-          locations: true,
-        },
-      },
-    },
-  });
-};
+export class ProductService {
+  constructor(private readonly productRepository: ProductRepository) {}
+
+  async getProductDistributors(productId: string) {
+    return this.productRepository.findDistributorsByProductId(productId);
+  }
+}
