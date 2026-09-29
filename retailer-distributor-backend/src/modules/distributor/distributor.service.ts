@@ -1,4 +1,4 @@
-import { prisma } from "../../config/prisma";
+import { prisma } from "../../infrastructure/prisma/prisma.client";
 
 export const getDistributors = async () => {
   return prisma.distributor.findMany({

@@ -1,5 +1,5 @@
-import { prisma } from "../../config/prisma";
-import { OpenSearchRepository } from "./opensearch.repository";
+import { OpenSearchRepository } from "../repositories/opensearch.repository";
+import { prisma } from "../../prisma/prisma.client";
 
 const searchRepository = new OpenSearchRepository();
 

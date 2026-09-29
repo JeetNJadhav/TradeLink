@@ -1,5 +1,5 @@
-import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
+import { prisma } from "../../infrastructure/prisma/prisma.client";
 
 export type CreateOrderItemInput = {
   productId: string;

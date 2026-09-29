@@ -24,6 +24,7 @@ export interface ProductSearchParams {
 
 // This is our abstraction.
 export interface SearchRepository {
+  // opensearch scripts
   indexProductDistributor(document: SearchDocument): Promise<void>;
 
   searchProducts(params: ProductSearchParams): Promise<SearchDocument[]>;
@@ -38,3 +39,16 @@ export interface ProductSuggestion {
   id: string;
   label: string;
 }
+
+// for future: replace above searchRepository with
+// export interface ProductSearcher {
+//   searchProducts(
+//     params: ProductSearchParams
+//   ): Promise<SearchDocument[]>;
+// }
+
+// export interface ProductSuggestionProvider {
+//   getProductSuggestions(
+//     query: string
+//   ): Promise<ProductSuggestion[]>;
+// }

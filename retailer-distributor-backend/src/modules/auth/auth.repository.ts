@@ -1,4 +1,4 @@
-import { prisma } from "../../config/prisma";
+import { prisma } from "../../infrastructure/prisma/prisma.client";
 import { createRefreshToken, hashRefreshToken } from "./token.service";
 
 export const findUserByEmail = async (email: string) =>

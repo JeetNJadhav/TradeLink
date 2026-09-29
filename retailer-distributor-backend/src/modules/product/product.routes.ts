@@ -1,11 +1,13 @@
 import { Server } from "@hapi/hapi";
 import Joi from "joi";
 import {
-  getProductDistributorsHandler,
-  getProductSuggestions,
-  searchProducts,
+  createSearchProductsHandler,
+  createProductDistributorsHandler,
+  createProductSuggestions,
 } from "./product.controller";
 import { requireAuthentication } from "../../middleware/authentication";
+import { SearchService } from "../search/search.service";
+import { ProductService } from "./product.service";
 
 const searchQuerySchema = Joi.object({
   q: Joi.string().trim().min(1).required(),
@@ -22,7 +24,11 @@ const productIdParamsSchema = Joi.object({
   id: Joi.string().guid({ version: "uuidv4" }).required(),
 });
 
-export const registerProductRoutes = (server: Server) => {
+export const registerProductRoutes = (
+  server: Server,
+  searchService: SearchService,
+  productService: ProductService,
+) => {
   server.route([
     {
       method: "GET",
@@ -31,7 +37,7 @@ export const registerProductRoutes = (server: Server) => {
         pre: [{ method: requireAuthentication }],
         validate: { query: suggestionsQuerySchema },
       },
-      handler: getProductSuggestions,
+      handler: createProductSuggestions(searchService),
     },
     {
       method: "GET",
@@ -40,7 +46,7 @@ export const registerProductRoutes = (server: Server) => {
         pre: [{ method: requireAuthentication }],
         validate: { params: productIdParamsSchema },
       },
-      handler: getProductDistributorsHandler,
+      handler: createProductDistributorsHandler(productService),
     },
     {
       method: "GET",
@@ -49,7 +55,7 @@ export const registerProductRoutes = (server: Server) => {
         pre: [{ method: requireAuthentication }],
         validate: { query: searchQuerySchema },
       },
-      handler: searchProducts,
+      handler: createSearchProductsHandler(searchService),
     },
   ]);
 };
