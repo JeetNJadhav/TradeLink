@@ -8,7 +8,7 @@ import { registerAuthRoutes } from "./modules/auth/auth.routes";
 
 import { SearchService } from "./modules/search/search.service";
 import { OpenSearchRepository } from "./infrastructure/opensearch/repositories/opensearch.repository";
-import { PrismaDistributorProductRepository } from "./infrastructure/prisma/repositories/distributorProduct.repository.prisma";
+import { DistributorProductRepository } from "./infrastructure/prisma/repositories/distributorProduct.repository.prisma";
 
 import { ProductService } from "./modules/product/product.service";
 import { prisma } from "./infrastructure/prisma/prisma.client";
@@ -17,6 +17,7 @@ import { createDistributorService } from "./modules/distributor/distributor.serv
 
 import { registerAuthentication } from "./middleware/authentication";
 import { registerSearchRoutes } from "./modules/search/search.routes";
+import { ROUTES } from "./config/routes";
 
 const createApp = async (): Promise<Hapi.Server> => {
   // search
@@ -24,7 +25,7 @@ const createApp = async (): Promise<Hapi.Server> => {
   const searchService = new SearchService(searchRepository);
 
   // product
-  const productRepository = new PrismaDistributorProductRepository(prisma);
+  const productRepository = new DistributorProductRepository(prisma);
   const productService = new ProductService(productRepository);
 
   // distributor
@@ -57,7 +58,7 @@ const createApp = async (): Promise<Hapi.Server> => {
 
   server.route({
     method: "GET",
-    path: "/health",
+    path: ROUTES.HEALTH,
     handler: () => {
       return {
         status: "ok",

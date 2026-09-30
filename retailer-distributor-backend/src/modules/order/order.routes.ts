@@ -1,9 +1,9 @@
 import { Server } from "@hapi/hapi";
 import Joi from "joi";
 import { createOrderHandler } from "./order.controller";
-import { requireAuthentication } from "../../middleware/authentication";
 import { requireRole } from "../../middleware/authorization";
 import { requireCsrf } from "../../middleware/csrf";
+import { ROUTES } from "../../config/routes";
 
 const createOrderSchema = Joi.object({
   distributorId: Joi.string().guid({ version: "uuidv4" }).required(),
@@ -21,7 +21,7 @@ const createOrderSchema = Joi.object({
 export const registerOrderRoutes = (server: Server) => {
   server.route({
     method: "POST",
-    path: "/orders",
+    path: ROUTES.ORDERS.CREATE,
     options: {
       auth: "access-token",
       pre: [{ method: requireRole("RETAILER") }, { method: requireCsrf }],

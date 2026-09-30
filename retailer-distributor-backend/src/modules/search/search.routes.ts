@@ -5,6 +5,7 @@ import {
   createSeacrhSuggestions,
   createSearchHandler,
 } from "./search.controller";
+import { ROUTES } from "../../config/routes";
 
 const searchQuerySchema = Joi.object({
   q: Joi.string().trim().min(1).required(),
@@ -35,7 +36,7 @@ export const registerSearchRoutes = (
   server.route([
     {
       method: "GET",
-      path: "/search/suggestions",
+      path: ROUTES.SEARCH.SEARCH_QUERY,
       options: {
         auth: "access-token",
         validate: { query: suggestionsQuerySchema },
@@ -45,7 +46,7 @@ export const registerSearchRoutes = (
 
     {
       method: "GET",
-      path: "/search/q",
+      path: ROUTES.DISTRIBUTOR_PRODUCTS.BY_ID,
       options: {
         auth: "access-token",
         validate: { query: searchQuerySchema },
