@@ -7,8 +7,8 @@ export const LOGOUT_API = `${API_URL}/auth/logout`;
 export const CURRENT_USER_API = `${API_URL}/auth/me`;
 
 // Product APIs
-export const PRODUCT_SEARCH_API = `${API_URL}/products/search`;
-export const PRODUCT_SUGGESTIONS_API = `${API_URL}/products/suggestions`;
+export const PRODUCT_SEARCH_API = `${API_URL}/search/q`;
+export const PRODUCT_SUGGESTIONS_API = `${API_URL}/search/suggestions`;
 
 // Distributor APIs
 export const DISTRIBUTOR_API = (id: string) => `${API_URL}/distributors/${id}`;
