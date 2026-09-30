@@ -3,7 +3,7 @@ export interface SearchDocument {
   productId: string;
   productName: string;
   productCategory: string;
-  brand?: string;
+  brand: string;
   distributorId: string;
   distributorName: string;
   price: number;

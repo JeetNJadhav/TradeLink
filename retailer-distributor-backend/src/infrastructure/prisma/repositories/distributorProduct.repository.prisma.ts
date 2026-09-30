@@ -4,7 +4,8 @@ import {
   ProductRepository,
 } from "../../../modules/product/product.repository";
 
-export class PrismaDistributorProductRepository implements ProductRepository {
+// give me the distributors for this product
+export class DistributorProductRepository implements ProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findDistributorsByProductId(

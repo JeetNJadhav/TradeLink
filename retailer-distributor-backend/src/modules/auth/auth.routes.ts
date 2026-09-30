@@ -7,6 +7,7 @@ import {
   meHandler,
   refreshHandler,
 } from "./auth.controller";
+import { ROUTES } from "../../config/routes";
 
 const credentialsSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -16,7 +17,7 @@ const credentialsSchema = Joi.object({
 export const registerAuthRoutes = (server: Server) => {
   server.route({
     method: "POST",
-    path: "/auth/login",
+    path: ROUTES.AUTH.LOGIN,
     options: {
       validate: {
         payload: credentialsSchema,
@@ -31,19 +32,19 @@ export const registerAuthRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/auth/refresh",
+    path: ROUTES.AUTH.REFRESH,
     handler: refreshHandler,
   });
 
   server.route({
     method: "POST",
-    path: "/auth/logout",
+    path: ROUTES.AUTH.LOGOUT,
     handler: logoutHandler,
   });
 
   server.route({
     method: "GET",
-    path: "/auth/me",
+    path: ROUTES.AUTH.ME,
     options: { auth: "access-token" },
     handler: meHandler,
   });

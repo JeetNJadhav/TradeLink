@@ -5,6 +5,7 @@ import {
   createGetDistributorProductsHandler,
 } from "./distributor.controller";
 import { DistributorService } from "./distributor.service";
+import { ROUTES } from "../../config/routes";
 
 const distributorProductParamsSchema = Joi.object({
   distributorProductId: Joi.string().guid({ version: "uuidv4" }).required(),
@@ -20,7 +21,7 @@ export const registerDistributorRoutes = (
 ) => {
   server.route({
     method: "GET",
-    path: "/distributor-products/{distributorProductId}",
+    path: ROUTES.DISTRIBUTOR_PRODUCTS.BY_ID,
     options: {
       auth: "access-token",
       validate: {
@@ -32,7 +33,7 @@ export const registerDistributorRoutes = (
 
   server.route({
     method: "GET",
-    path: "/distributors/{distributorId}/products",
+    path: ROUTES.DISTRIBUTORS.PRODUCTS,
     options: {
       auth: "access-token",
       validate: {

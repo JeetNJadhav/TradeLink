@@ -13,6 +13,7 @@ import {
   ACCESS_COOKIE_MAX_AGE_SECONDS,
   REFRESH_COOKIE_MAX_AGE_SECONDS,
 } from "./token.service";
+import { COOKIE_PATHS, ROUTES } from "../../config/routes";
 
 const ACCESS_COOKIE_NAME = process.env.ACCESS_COOKIE_NAME || "accessToken";
 
@@ -40,7 +41,7 @@ const accessCookieOptions = () => ({
   isHttpOnly: true,
   isSecure: IS_SECURE,
   isSameSite: IS_SAME_SITE,
-  path: "/",
+  path: COOKIE_PATHS.ROOT,
 });
 
 /**
@@ -54,7 +55,7 @@ const refreshCookieOptions = () => ({
   isHttpOnly: true,
   isSecure: IS_SECURE,
   isSameSite: IS_SAME_SITE,
-  path: "/auth",
+  path: ROUTES.AUTH.BASE,
 });
 
 /**
@@ -68,7 +69,7 @@ const csrfCookieOptions = () => ({
   isHttpOnly: false,
   isSecure: IS_SECURE,
   isSameSite: IS_SAME_SITE,
-  path: "/",
+  path: COOKIE_PATHS.ROOT,
 });
 
 /**
@@ -97,7 +98,7 @@ const setCsrfCookie = (h: ResponseToolkit, csrfToken: string): void => {
  */
 const clearAccessCookie = (h: ResponseToolkit): void => {
   h.unstate(ACCESS_COOKIE_NAME, {
-    path: "/",
+    path: COOKIE_PATHS.ROOT,
   });
 };
 
@@ -106,7 +107,7 @@ const clearAccessCookie = (h: ResponseToolkit): void => {
  */
 const clearRefreshCookie = (h: ResponseToolkit): void => {
   h.unstate(REFRESH_COOKIE_NAME, {
-    path: "/auth",
+    path: ROUTES.AUTH.BASE,
   });
 };
 
@@ -115,7 +116,7 @@ const clearRefreshCookie = (h: ResponseToolkit): void => {
  */
 const clearCsrfCookie = (h: ResponseToolkit): void => {
   h.unstate(CSRF_COOKIE_NAME, {
-    path: "/",
+    path: COOKIE_PATHS.ROOT,
   });
 };
 
