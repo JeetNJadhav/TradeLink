@@ -18,15 +18,20 @@ import {
   createGetDistributorProductByIdHandler,
   createGetDistributorProductsHandler,
 } from "./modules/distributor/distributor.controller";
+import { registerAuthentication } from "./middleware/authentication";
 
 const createApp = async (): Promise<Hapi.Server> => {
+  // search
   const searchRepository = new OpenSearchRepository();
   const searchService = new SearchService(searchRepository);
+
+  // product
   const productRepository = new PrismaDistributorProductRepository(prisma);
   const productService = new ProductService(productRepository);
 
-  const distributorRepository = new PrismaDistributorRepository();
+  // distributor
   // Using functional DI here to compare it with the class-based approach used by other services.
+  const distributorRepository = new PrismaDistributorRepository();
   const distributorService = createDistributorService(distributorRepository);
 
   const server = Hapi.server({
@@ -40,6 +45,8 @@ const createApp = async (): Promise<Hapi.Server> => {
       },
     },
   });
+
+  registerAuthentication(server);
 
   server.ext("onPreResponse", (req, h) => {
     const resp = req.response;

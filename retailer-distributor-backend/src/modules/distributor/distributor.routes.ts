@@ -4,7 +4,6 @@ import {
   createGetDistributorProductByIdHandler,
   createGetDistributorProductsHandler,
 } from "./distributor.controller";
-import { requireAuthentication } from "../../middleware/authentication";
 import { DistributorService } from "./distributor.service";
 
 const distributorProductParamsSchema = Joi.object({
@@ -23,7 +22,7 @@ export const registerDistributorRoutes = (
     method: "GET",
     path: "/distributor-products/{distributorProductId}",
     options: {
-      pre: [{ method: requireAuthentication }],
+      auth: "access-token",
       validate: {
         params: distributorProductParamsSchema,
       },
@@ -35,7 +34,7 @@ export const registerDistributorRoutes = (
     method: "GET",
     path: "/distributors/{distributorId}/products",
     options: {
-      pre: [{ method: requireAuthentication }],
+      auth: "access-token",
       validate: {
         params: distributorParamsSchema,
       },

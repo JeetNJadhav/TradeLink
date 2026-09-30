@@ -7,6 +7,17 @@ export const errorHandler = (
 ) => {
   console.error(err);
 
+  if ("isBoom" in err && err.isBoom) {
+    return h
+      .response({
+        success: false,
+        error: {
+          message: err.message,
+        },
+      })
+      .code(err.output.statusCode);
+  }
+
   return h
     .response({
       success: false,

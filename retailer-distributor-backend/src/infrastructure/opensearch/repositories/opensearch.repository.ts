@@ -44,10 +44,8 @@ export class OpenSearchRepository implements SearchRepository {
                 },
               },
               {
-                match: {
-                  productCategory: {
-                    query,
-                  },
+                term: {
+                  productCategory: query.trim().toLowerCase(),
                 },
               },
               {
@@ -101,6 +99,10 @@ export class OpenSearchRepository implements SearchRepository {
 
       body: {
         size: 50,
+
+        collapse: {
+          field: "productId",
+        },
 
         query: {
           bool: {

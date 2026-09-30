@@ -32,6 +32,7 @@ const createProductsIndex = async () => {
 
             productCategory: {
               type: "keyword",
+              normalizer: "category_normalizer",
             },
 
             brand: {
