@@ -14,11 +14,9 @@ import { ProductService } from "./modules/product/product.service";
 import { prisma } from "./infrastructure/prisma/prisma.client";
 import { PrismaDistributorRepository } from "./infrastructure/prisma/repositories/distributor.repository.prisma";
 import { createDistributorService } from "./modules/distributor/distributor.service";
-import {
-  createGetDistributorProductByIdHandler,
-  createGetDistributorProductsHandler,
-} from "./modules/distributor/distributor.controller";
+
 import { registerAuthentication } from "./middleware/authentication";
+import { registerSearchRoutes } from "./modules/search/search.routes";
 
 const createApp = async (): Promise<Hapi.Server> => {
   // search
@@ -68,7 +66,8 @@ const createApp = async (): Promise<Hapi.Server> => {
   });
 
   registerAuthRoutes(server);
-  registerProductRoutes(server, searchService, productService);
+  registerSearchRoutes(server, searchService);
+  registerProductRoutes(server, productService);
   registerDistributorRoutes(server, distributorService);
   registerOrderRoutes(server);
 
