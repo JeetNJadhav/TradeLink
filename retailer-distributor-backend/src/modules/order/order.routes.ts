@@ -23,11 +23,8 @@ export const registerOrderRoutes = (server: Server) => {
     method: "POST",
     path: "/orders",
     options: {
-      pre: [
-        { method: requireAuthentication },
-        { method: requireRole("RETAILER") },
-        { method: requireCsrf },
-      ],
+      auth: "access-token",
+      pre: [{ method: requireRole("RETAILER") }, { method: requireCsrf }],
       validate: {
         payload: createOrderSchema,
       },

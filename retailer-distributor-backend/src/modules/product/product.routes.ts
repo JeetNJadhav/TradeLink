@@ -5,14 +5,24 @@ import {
   createProductDistributorsHandler,
   createProductSuggestions,
 } from "./product.controller";
-import { requireAuthentication } from "../../middleware/authentication";
 import { SearchService } from "../search/search.service";
 import { ProductService } from "./product.service";
 
 const searchQuerySchema = Joi.object({
   q: Joi.string().trim().min(1).required(),
-  latitude: Joi.number().min(-90).max(90).optional(),
-  longitude: Joi.number().min(-180).max(180).optional(),
+
+  latitude: Joi.number().min(-90).max(90).when("sortBy", {
+    is: "nearest",
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  longitude: Joi.number().min(-180).max(180).when("sortBy", {
+    is: "nearest",
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
   sortBy: Joi.string().valid("relevance", "nearest").optional(),
 });
 
@@ -34,7 +44,7 @@ export const registerProductRoutes = (
       method: "GET",
       path: "/products/suggestions",
       options: {
-        pre: [{ method: requireAuthentication }],
+        auth: "access-token",
         validate: { query: suggestionsQuerySchema },
       },
       handler: createProductSuggestions(searchService),
@@ -43,7 +53,7 @@ export const registerProductRoutes = (
       method: "GET",
       path: "/products/{id}/distributors",
       options: {
-        pre: [{ method: requireAuthentication }],
+        auth: "access-token",
         validate: { params: productIdParamsSchema },
       },
       handler: createProductDistributorsHandler(productService),
@@ -52,7 +62,7 @@ export const registerProductRoutes = (
       method: "GET",
       path: "/products/search",
       options: {
-        pre: [{ method: requireAuthentication }],
+        auth: "access-token",
         validate: { query: searchQuerySchema },
       },
       handler: createSearchProductsHandler(searchService),

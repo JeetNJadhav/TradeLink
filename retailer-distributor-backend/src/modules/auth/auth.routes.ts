@@ -7,11 +7,12 @@ import {
   meHandler,
   refreshHandler,
 } from "./auth.controller";
-import { requireAuthentication } from "../../middleware/authentication";
+
 const credentialsSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
 });
+
 export const registerAuthRoutes = (server: Server) => {
   server.route({
     method: "POST",
@@ -27,20 +28,23 @@ export const registerAuthRoutes = (server: Server) => {
     },
     handler: loginHandler,
   });
+
   server.route({
     method: "POST",
     path: "/auth/refresh",
     handler: refreshHandler,
   });
+
   server.route({
     method: "POST",
     path: "/auth/logout",
     handler: logoutHandler,
   });
+
   server.route({
     method: "GET",
     path: "/auth/me",
-    options: { pre: [{ method: requireAuthentication }] },
+    options: { auth: "access-token" },
     handler: meHandler,
   });
 };
