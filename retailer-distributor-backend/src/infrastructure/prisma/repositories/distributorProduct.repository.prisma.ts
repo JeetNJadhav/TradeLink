@@ -1,6 +1,7 @@
-import { PrismaClient } from "../../../generated/prisma/client";
+import type { PrismaDb } from "../prisma.client";
 import type { DistributorProductRepository } from "../../../modules/distributorProduct/distributorProduct.repository";
 import type {
+  DistributorProductPricing,
   DistributorProductWithDetails,
   DistributorProductWithDistributor,
   DistributorProductWithProduct,
@@ -9,7 +10,7 @@ import type {
 export class PrismaDistributorProductRepository
   implements DistributorProductRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaDb) {}
 
   async findById(id: string): Promise<DistributorProductWithDetails | null> {
     const distributorProduct = await this.prisma.distributorProduct.findUnique({
@@ -69,5 +70,72 @@ export class PrismaDistributorProductRepository
       ...item,
       price: item.price.toNumber(),
     }));
+  }
+
+  async findAllWithDetails(): Promise<DistributorProductWithDetails[]> {
+    const results = await this.prisma.distributorProduct.findMany({
+      include: {
+        product: true,
+        distributor: {
+          include: {
+            locations: true,
+          },
+        },
+      },
+    });
+
+    return results.map((item) => ({
+      ...item,
+      price: item.price.toNumber(),
+    }));
+  }
+
+  async findPricing(
+    distributorId: string,
+    productId: string,
+  ): Promise<DistributorProductPricing | null> {
+    const distributorProduct = await this.prisma.distributorProduct.findUnique({
+      where: {
+        distributorId_productId: {
+          distributorId,
+          productId,
+        },
+      },
+    });
+
+    if (!distributorProduct) {
+      return null;
+    }
+
+    return {
+      id: distributorProduct.id,
+      unitPrice: distributorProduct.price.toString(),
+    };
+  }
+
+  // The stock update is conditional: PostgreSQL updates the row only when
+  // enough stock remains. This prevents two concurrent orders from both
+  // successfully reserving the same inventory.
+  async reserveStock(
+    distributorId: string,
+    productId: string,
+    quantity: number,
+  ): Promise<boolean> {
+    const updated = await this.prisma.distributorProduct.updateMany({
+      where: {
+        distributorId,
+        productId,
+        stock: {
+          gte: quantity,
+        },
+      },
+      data: {
+        stock: {
+          decrement: quantity,
+        },
+      },
+    });
+
+    return updated.count === 1;
   }
 }

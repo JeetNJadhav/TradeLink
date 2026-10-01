@@ -2,6 +2,16 @@ import { Request, ResponseToolkit } from "@hapi/hapi";
 import { SearchService } from "./search.service";
 import { successResponse } from "../../utils/response";
 
+export const createSeacrhSuggestionsHandler =
+  (searchService: SearchService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { q } = request.query as { q?: string };
+
+    const suggestions = await searchService.getProductSuggestions(q ?? "");
+
+    return successResponse(h, { suggestions });
+  };
+
 export const createSearchHandler =
   (searchService: SearchService) =>
   async (request: Request, h: ResponseToolkit) => {
@@ -20,22 +30,6 @@ export const createSearchHandler =
     });
 
     return successResponse(h, { products: results });
-  };
-
-export const createSeacrhSuggestionsHandler =
-  (searchService: SearchService) =>
-  async (request: Request, h: ResponseToolkit) => {
-    const { q } = request.query as { q?: string };
-
-    const suggestions = await searchService.getProductSuggestions(q ?? "");
-
-    // return h.response({
-    //   success: true,
-    //   data: {
-    //     suggestions,
-    //   },
-    // });
-    return successResponse(h, { suggestions });
   };
 
 // Request

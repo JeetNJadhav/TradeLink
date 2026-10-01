@@ -7,4 +7,6 @@ export interface DistributorRepository {
   getDistributors(): Promise<DistributorWithLocations[]>;
 
   getDistributorById(id: string): Promise<DistributorWithProducts | null>;
+
+  exists(id: string): Promise<boolean>;
 }

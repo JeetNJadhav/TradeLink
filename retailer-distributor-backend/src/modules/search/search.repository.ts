@@ -4,25 +4,14 @@ import {
   SearchDocument,
 } from "./search.types";
 
-// This is our abstraction.
+// Read side: what the search service needs.
 export interface SearchRepository {
-  // opensearch scripts
-  indexProductDistributor(document: SearchDocument): Promise<void>;
-
   searchProducts(params: ProductSearchParams): Promise<SearchDocument[]>;
 
   getProductSuggestions(query: string): Promise<ProductSuggestion[]>;
 }
 
-// for future: replace above searchRepository with
-// export interface ProductSearcher {
-//   searchProducts(
-//     params: ProductSearchParams
-//   ): Promise<SearchDocument[]>;
-// }
-
-// export interface ProductSuggestionProvider {
-//   getProductSuggestions(
-//     query: string
-//   ): Promise<ProductSuggestion[]>;
-// }
+// Write side: used by the indexing scripts.
+export interface SearchIndexer {
+  indexProductDistributor(document: SearchDocument): Promise<void>;
+}

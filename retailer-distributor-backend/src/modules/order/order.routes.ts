@@ -1,6 +1,7 @@
 import { Server } from "@hapi/hapi";
 import Joi from "joi";
 import { createOrderHandler } from "./order.controller";
+import { OrderService } from "./order.service";
 import { requireRole } from "../../middleware/authorization";
 import { requireCsrf } from "../../middleware/csrf";
 import { ROUTES } from "../../config/routes";
@@ -18,7 +19,10 @@ const createOrderSchema = Joi.object({
     .required(),
 });
 
-export const registerOrderRoutes = (server: Server) => {
+export const registerOrderRoutes = (
+  server: Server,
+  orderService: OrderService,
+) => {
   server.route({
     method: "POST",
     path: ROUTES.ORDERS.CREATE,
@@ -29,6 +33,6 @@ export const registerOrderRoutes = (server: Server) => {
         payload: createOrderSchema,
       },
     },
-    handler: createOrderHandler,
+    handler: createOrderHandler(orderService),
   });
 };

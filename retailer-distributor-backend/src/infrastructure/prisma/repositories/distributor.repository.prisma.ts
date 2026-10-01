@@ -1,4 +1,4 @@
-import { prisma } from "../prisma.client";
+import type { PrismaDb } from "../prisma.client";
 import type { DistributorRepository } from "../../../modules/distributor/distributor.repository";
 import type {
   DistributorWithLocations,
@@ -6,8 +6,10 @@ import type {
 } from "../../../modules/distributor/distributor.types";
 
 export class PrismaDistributorRepository implements DistributorRepository {
+  constructor(private readonly prisma: PrismaDb) {}
+
   async getDistributors(): Promise<DistributorWithLocations[]> {
-    const distributors = await prisma.distributor.findMany({
+    const distributors = await this.prisma.distributor.findMany({
       include: {
         locations: true,
       },
@@ -22,7 +24,7 @@ export class PrismaDistributorRepository implements DistributorRepository {
   async getDistributorById(
     id: string,
   ): Promise<DistributorWithProducts | null> {
-    const distributor = await prisma.distributor.findUnique({
+    const distributor = await this.prisma.distributor.findUnique({
       where: { id },
       include: {
         locations: true,
@@ -45,5 +47,13 @@ export class PrismaDistributorRepository implements DistributorRepository {
         price: item.price.toNumber(),
       })),
     };
+  }
+
+  async exists(id: string): Promise<boolean> {
+    const count = await this.prisma.distributor.count({
+      where: { id },
+    });
+
+    return count > 0;
   }
 }

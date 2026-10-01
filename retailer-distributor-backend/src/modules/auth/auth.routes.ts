@@ -2,11 +2,12 @@ import { Server } from "@hapi/hapi";
 import Joi from "joi";
 
 import {
-  loginHandler,
-  logoutHandler,
-  meHandler,
-  refreshHandler,
+  createLoginHandler,
+  createLogoutHandler,
+  createMeHandler,
+  createRefreshHandler,
 } from "./auth.controller";
+import { AuthService } from "./auth.service";
 import { ROUTES } from "../../config/routes";
 
 const credentialsSchema = Joi.object({
@@ -14,7 +15,10 @@ const credentialsSchema = Joi.object({
   password: Joi.string().min(8).required(),
 });
 
-export const registerAuthRoutes = (server: Server) => {
+export const registerAuthRoutes = (
+  server: Server,
+  authService: AuthService,
+) => {
   server.route({
     method: "POST",
     path: ROUTES.AUTH.LOGIN,
@@ -27,25 +31,25 @@ export const registerAuthRoutes = (server: Server) => {
         },
       },
     },
-    handler: loginHandler,
+    handler: createLoginHandler(authService),
   });
 
   server.route({
     method: "POST",
     path: ROUTES.AUTH.REFRESH,
-    handler: refreshHandler,
+    handler: createRefreshHandler(authService),
   });
 
   server.route({
     method: "POST",
     path: ROUTES.AUTH.LOGOUT,
-    handler: logoutHandler,
+    handler: createLogoutHandler(authService),
   });
 
   server.route({
     method: "GET",
     path: ROUTES.AUTH.ME,
     options: { auth: "access-token" },
-    handler: meHandler,
+    handler: createMeHandler(authService),
   });
 };

@@ -1,151 +1,11 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
-import crypto from "crypto";
 
-import {
-  AuthError,
-  getCurrentUser,
-  login,
-  logout,
-  refresh,
-} from "./auth.service";
-
-import {
-  ACCESS_COOKIE_MAX_AGE_SECONDS,
-  REFRESH_COOKIE_MAX_AGE_SECONDS,
-} from "./token.service";
-import { COOKIE_PATHS, ROUTES } from "../../config/routes";
-
-const ACCESS_COOKIE_NAME = process.env.ACCESS_COOKIE_NAME || "accessToken";
-
-const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME || "refreshToken";
-
-const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || "csrfToken";
-
-const CSRF_HEADER_NAME = process.env.CSRF_HEADER_NAME || "x-csrf-token";
-
-const IS_SAME_SITE = (process.env.COOKIE_SAMESITE || "Strict") as
-  | "Strict"
-  | "Lax"
-  | "None";
-
-const IS_SECURE = process.env.COOKIE_SECURE === "true";
-
-/**
- * Access token cookie.
- *
- * Sent to all backend routes because the access token
- * is required for protected APIs.
- */
-const accessCookieOptions = () => ({
-  ttl: ACCESS_COOKIE_MAX_AGE_SECONDS * 1000,
-  isHttpOnly: true,
-  isSecure: IS_SECURE,
-  isSameSite: IS_SAME_SITE,
-  path: COOKIE_PATHS.ROOT,
-});
-
-/**
- * Refresh token cookie.
- *
- * Restricted to /auth routes because the refresh token
- * is only required by authentication endpoints.
- */
-const refreshCookieOptions = () => ({
-  ttl: REFRESH_COOKIE_MAX_AGE_SECONDS * 1000,
-  isHttpOnly: true,
-  isSecure: IS_SECURE,
-  isSameSite: IS_SAME_SITE,
-  path: ROUTES.AUTH.BASE,
-});
-
-/**
- * CSRF cookie.
- *
- * This MUST NOT be HttpOnly because the frontend needs
- * to read it and send it back in the CSRF header.
- */
-const csrfCookieOptions = () => ({
-  ttl: REFRESH_COOKIE_MAX_AGE_SECONDS * 1000,
-  isHttpOnly: false,
-  isSecure: IS_SECURE,
-  isSameSite: IS_SAME_SITE,
-  path: COOKIE_PATHS.ROOT,
-});
-
-/**
- * Set access token cookie.
- */
-const setAccessCookie = (h: ResponseToolkit, accessToken: string): void => {
-  h.state(ACCESS_COOKIE_NAME, accessToken, accessCookieOptions());
-};
-
-/**
- * Set refresh token cookie.
- */
-const setRefreshCookie = (h: ResponseToolkit, refreshToken: string): void => {
-  h.state(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
-};
-
-/**
- * Set CSRF cookie.
- */
-const setCsrfCookie = (h: ResponseToolkit, csrfToken: string): void => {
-  h.state(CSRF_COOKIE_NAME, csrfToken, csrfCookieOptions());
-};
-
-/**
- * Clear access token cookie.
- */
-const clearAccessCookie = (h: ResponseToolkit): void => {
-  h.unstate(ACCESS_COOKIE_NAME, {
-    path: COOKIE_PATHS.ROOT,
-  });
-};
-
-/**
- * Clear refresh token cookie.
- */
-const clearRefreshCookie = (h: ResponseToolkit): void => {
-  h.unstate(REFRESH_COOKIE_NAME, {
-    path: ROUTES.AUTH.BASE,
-  });
-};
-
-/**
- * Clear CSRF cookie.
- */
-const clearCsrfCookie = (h: ResponseToolkit): void => {
-  h.unstate(CSRF_COOKIE_NAME, {
-    path: COOKIE_PATHS.ROOT,
-  });
-};
-
-/**
- * Generate a CSRF token.
- */
-const generateCsrfToken = (): string => {
-  return crypto.randomBytes(32).toString("hex");
-};
-
-/**
- * Validate CSRF token.
- *
- * This should be called for state-changing requests:
- *
- * POST
- * PUT
- * PATCH
- * DELETE
- */
-export const validateCsrfToken = (request: Request): void => {
-  const csrfCookie = request.state[CSRF_COOKIE_NAME] as string | undefined;
-
-  const csrfHeader = request.headers[CSRF_HEADER_NAME] as string | undefined;
-
-  if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-    throw new AuthError("Invalid CSRF token", 403);
-  }
-};
+import { REFRESH_COOKIE_NAME } from "../../config/auth.config";
+import { successResponse } from "../../utils/response";
+import { clearAuthCookies, setAuthCookies } from "./auth.cookies";
+import { AuthError } from "./auth.errors";
+import { AuthService } from "./auth.service";
+import { generateCsrfToken } from "./csrf.service";
 
 /**
  * LOGIN
@@ -156,42 +16,24 @@ export const validateCsrfToken = (request: Request): void => {
  *
  * Access/refresh tokens are NOT returned to React.
  */
-export const loginHandler = async (request: Request, h: ResponseToolkit) => {
-  try {
+export const createLoginHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
     const { email, password } = request.payload as {
       email: string;
       password: string;
     };
 
-    const result = await login(email, password);
+    const result = await authService.login(email, password);
 
-    const csrfToken = generateCsrfToken();
-
-    setAccessCookie(h, result.accessToken);
-    setRefreshCookie(h, result.refreshToken);
-    setCsrfCookie(h, csrfToken);
-
-    return h.response({
-      success: true,
-      data: {
-        user: result.authenticatedUser,
-      },
+    setAuthCookies(h, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      csrfToken: generateCsrfToken(),
     });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return h
-        .response({
-          success: false,
-          error: {
-            message: error.message,
-          },
-        })
-        .code(error.statusCode);
-    }
 
-    throw error;
-  }
-};
+    return successResponse(h, { user: result.authenticatedUser });
+  };
 
 /**
  * REFRESH
@@ -201,110 +43,63 @@ export const loginHandler = async (request: Request, h: ResponseToolkit) => {
  * New access token -> HttpOnly cookie
  * New refresh token -> HttpOnly cookie
  */
-export const refreshHandler = async (request: Request, h: ResponseToolkit) => {
-  try {
-    const refreshToken = request.state[REFRESH_COOKIE_NAME] as
-      | string
-      | undefined;
+export const createRefreshHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    try {
+      const refreshToken = request.state[REFRESH_COOKIE_NAME] as
+        | string
+        | undefined;
 
-    if (!refreshToken) {
-      throw new AuthError("Refresh token is required");
+      if (!refreshToken) {
+        throw new AuthError("Refresh token is required");
+      }
+
+      const result = await authService.refresh(refreshToken);
+
+      setAuthCookies(h, {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        csrfToken: generateCsrfToken(),
+      });
+
+      return successResponse(h, { user: result.authenticatedUser });
+    } catch (error) {
+      // A failed refresh ends the session; the error handler builds the response.
+      if (error instanceof AuthError) {
+        clearAuthCookies(h);
+      }
+
+      throw error;
     }
-
-    const result = await refresh(refreshToken);
-
-    const csrfToken = generateCsrfToken();
-
-    setAccessCookie(h, result.accessToken);
-    setRefreshCookie(h, result.refreshToken);
-    setCsrfCookie(h, csrfToken);
-
-    return h.response({
-      success: true,
-      data: {
-        user: result.authenticatedUser,
-      },
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      clearAccessCookie(h);
-      clearRefreshCookie(h);
-      clearCsrfCookie(h);
-
-      return h
-        .response({
-          success: false,
-          error: {
-            message: error.message,
-          },
-        })
-        .code(error.statusCode);
-    }
-
-    throw error;
-  }
-};
+  };
 
 /**
  * LOGOUT
  */
-export const logoutHandler = async (request: Request, h: ResponseToolkit) => {
-  const refreshToken = request.state[REFRESH_COOKIE_NAME] as string | undefined;
+export const createLogoutHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const refreshToken = request.state[REFRESH_COOKIE_NAME] as
+      | string
+      | undefined;
 
-  if (refreshToken) {
-    await logout(refreshToken);
-  }
+    await authService.logout(refreshToken);
 
-  clearAccessCookie(h);
-  clearRefreshCookie(h);
-  clearCsrfCookie(h);
+    clearAuthCookies(h);
 
-  return h.response({
-    success: true,
-    data: {
-      loggedOut: true,
-    },
-  });
-};
+    return successResponse(h, { loggedOut: true });
+  };
 
 /**
  * CURRENT USER
  */
-export const meHandler = async (request: Request, h: ResponseToolkit) => {
-  try {
-    const authenticatedUser = request.auth.credentials;
+export const createMeHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { userId, role } = request.auth.credentials;
 
-    if (!authenticatedUser) {
-      return h
-        .response({
-          success: false,
-          error: {
-            message: "Authentication required",
-          },
-        })
-        .code(401);
-    }
+    const user = await authService.getCurrentUser({ userId, role });
 
-    const user = await getCurrentUser(authenticatedUser);
-
-    return h.response({
-      success: true,
-      data: {
-        user,
-      },
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return h
-        .response({
-          success: false,
-          error: {
-            message: error.message,
-          },
-        })
-        .code(error.statusCode);
-    }
-
-    throw error;
-  }
-};
+    return successResponse(h, { user });
+  };

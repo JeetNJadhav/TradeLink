@@ -1,4 +1,5 @@
 import type {
+  DistributorProductPricing,
   DistributorProductWithDetails,
   DistributorProductWithDistributor,
   DistributorProductWithProduct,
@@ -15,4 +16,18 @@ export interface DistributorProductRepository {
   findByProductId(
     productId: string,
   ): Promise<DistributorProductWithDistributor[]>;
+
+  findAllWithDetails(): Promise<DistributorProductWithDetails[]>;
+
+  findPricing(
+    distributorId: string,
+    productId: string,
+  ): Promise<DistributorProductPricing | null>;
+
+  // Decrements stock only if enough remains. Returns false when it does not.
+  reserveStock(
+    distributorId: string,
+    productId: string,
+    quantity: number,
+  ): Promise<boolean>;
 }
