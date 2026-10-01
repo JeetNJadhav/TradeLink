@@ -8,7 +8,10 @@ export const createOrderHandler =
   async (request: Request, h: ResponseToolkit) => {
     const input = request.payload as CreateOrderInput;
     const { userId } = request.auth.credentials;
-    const order = await orderService.createOrder(userId, input);
+    const { order, stockLevels } = await orderService.createOrder(
+      userId,
+      input,
+    );
 
-    return successResponse(h, { order }, 201);
+    return successResponse(h, { order, stockLevels }, 201);
   };

@@ -1,15 +1,26 @@
 import { type FormEvent, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-const Login = () => {
-  const { login } = useAuth();
+import { Navigate, useLocation } from "react-router-dom";
+import { toApiError } from "../../../shared/api/ApiError";
+import { useAuth } from "../hooks/useAuth";
+import { ROLE_HOME } from "../roleRoutes";
 
-  const navigate = useNavigate();
+const Login = () => {
+  const { user, isLoading, login } = useAuth();
+
   const location = useLocation();
-  const [email, setEmail] = useState("amit@gmail.com");
-  const [password, setPassword] = useState("SeedPassword123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (isLoading) return <p>Loading...</p>;
+
+  // Covers both a fresh sign-in and opening /login while already signed in.
+  // A page the role may not open is redirected again by ProtectedRoute.
+  if (user) {
+    const from = (location.state as { from?: string } | null)?.from;
+    return <Navigate to={from || ROLE_HOME[user.role]} replace />;
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -17,10 +28,8 @@ const Login = () => {
     setLoading(true);
     try {
       await login(email, password);
-      const from = (location.state as { from?: string } | null)?.from || "/";
-      navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(toApiError(err).message);
     } finally {
       setLoading(false);
     }
@@ -37,6 +46,7 @@ const Login = () => {
             onChange={(e) => setEmail(e.target.value)}
             type="email"
             autoComplete="username"
+            required
           />
         </label>
         <label>
@@ -46,18 +56,24 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
             type="password"
             autoComplete="current-password"
+            required
           />
         </label>
         {error && <p className="auth-error">{error}</p>}
         <button type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}
         </button>
-        <p className="auth-hint">
-          Retailer: user1@seed.retaildist.local / SeedPassword123!
-        </p>
-        <p className="auth-hint">
-          Distributor: user601@seed.retaildist.local / SeedPassword123!
-        </p>
+        {/* Seed accounts are shown in development builds only. */}
+        {import.meta.env.DEV && (
+          <>
+            <p className="auth-hint">
+              Retailer: user1@seed.retaildist.local / SeedPassword123!
+            </p>
+            <p className="auth-hint">
+              Distributor: user601@seed.retaildist.local / SeedPassword123!
+            </p>
+          </>
+        )}
       </form>
     </main>
   );

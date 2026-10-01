@@ -1,37 +1,11 @@
-import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getDistributorProducts } from "../services/distributorService";
-
-import type { DistributorProductItem } from "../types/distributor";
+import DistributorProductCard from "../components/DistributorProductCard";
+import useDistributorProducts from "../hooks/useDistributorProducts";
 
 export const Distributor = () => {
   const { distributorId } = useParams<{ distributorId: string }>();
 
-  const [products, setProducts] = useState<DistributorProductItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!distributorId) return;
-
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await getDistributorProducts(distributorId);
-
-        setProducts(response.data.products);
-      } catch (error) {
-        console.error("Failed to fetch distributor products:", error);
-        setError("Failed to load distributor products.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [distributorId]);
+  const { products, loading, error } = useDistributorProducts(distributorId);
 
   if (loading) {
     return (
@@ -44,7 +18,7 @@ export const Distributor = () => {
   if (error) {
     return (
       <div className="distributor-page">
-        <div className="distributor-error">{error}</div>
+        <div className="distributor-error">{error.message}</div>
       </div>
     );
   }
@@ -63,22 +37,8 @@ export const Distributor = () => {
         </div>
       ) : (
         <div className="distributor-products">
-          {products?.map((item) => (
-            <div className="distributor-product-card" key={item.id}>
-              <h3>{item.product.name}</h3>
-
-              <div className="product-info">
-                {item.product.brand && <span>Brand: {item.product.brand}</span>}
-
-                {item.product.category && (
-                  <span>Category: {item.product.category}</span>
-                )}
-
-                <span className="product-price">₹{item.price}</span>
-
-                <span className="product-stock">Stock: {item.stock}</span>
-              </div>
-            </div>
+          {products.map((item) => (
+            <DistributorProductCard key={item.id} item={item} />
           ))}
         </div>
       )}

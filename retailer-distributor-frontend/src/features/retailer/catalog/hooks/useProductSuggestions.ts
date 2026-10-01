@@ -1,43 +1,22 @@
-import { useEffect, useState } from "react";
-import type { ProductSuggestion } from "../types/productSearch";
+import { useCallback } from "react";
+import { useAsync } from "../../../../shared/hooks/useAsync";
 import { getProductSuggestions } from "../services/productService";
 
-const MIN_SEARCH_LENGTH = 3;
+// Must match the minimum the backend answers suggestions for.
+export const MIN_SUGGESTION_LENGTH = 3;
 
 const useProductSuggestions = (search: string) => {
-  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
-  const [loading, setLoading] = useState(false);
+  const query = search.trim();
+  const enabled = query.length >= MIN_SUGGESTION_LENGTH;
 
-  useEffect(() => {
-    const query = search.trim();
-    if (query.length < MIN_SEARCH_LENGTH) {
-      setSuggestions([]);
-      setLoading(false);
-      return;
-    }
+  const loadSuggestions = useCallback(
+    (signal: AbortSignal) => getProductSuggestions(query, signal),
+    [query],
+  );
 
-    const controller = new AbortController();
-    setLoading(true);
+  const { data, loading } = useAsync(enabled ? loadSuggestions : null);
 
-    const loadSuggestions = async () => {
-      try {
-        const response = await getProductSuggestions(query, controller.signal);
-        if (!controller.signal.aborted) setSuggestions(response.data.suggestions);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Failed to fetch suggestions", error);
-          setSuggestions([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    void loadSuggestions();
-    return () => controller.abort();
-  }, [search]);
-
-  return { suggestions, loading };
+  return { suggestions: data ?? [], loading };
 };
 
 export default useProductSuggestions;

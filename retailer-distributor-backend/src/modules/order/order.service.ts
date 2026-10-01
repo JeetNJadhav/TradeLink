@@ -1,11 +1,19 @@
 import { OrderError } from "./order.errors";
-import type { CreateOrderInput, NewOrderItem, Order } from "./order.types";
+import type {
+  CreateOrderInput,
+  NewOrderItem,
+  PlacedOrder,
+  StockLevel,
+} from "./order.types";
 import type { OrderUnitOfWork } from "./order.unitOfWork";
 
 export class OrderService {
   constructor(private readonly unitOfWork: OrderUnitOfWork) {}
 
-  async createOrder(userId: string, input: CreateOrderInput): Promise<Order> {
+  async createOrder(
+    userId: string,
+    input: CreateOrderInput,
+  ): Promise<PlacedOrder> {
     const productIds = input.items.map((item) => item.productId);
     if (new Set(productIds).size !== productIds.length) {
       throw new OrderError(
@@ -55,22 +63,26 @@ export class OrderService {
           items,
         });
 
+        const stockLevels: StockLevel[] = [];
+
         for (const item of input.items) {
-          const reserved = await distributorProducts.reserveStock(
+          const remaining = await distributorProducts.reserveStock(
             input.distributorId,
             item.productId,
             item.quantity,
           );
 
-          if (!reserved) {
+          if (remaining === null) {
             throw new OrderError(
               `Insufficient stock for product ${item.productId}`,
               409,
             );
           }
+
+          stockLevels.push({ productId: item.productId, stock: remaining });
         }
 
-        return order;
+        return { order, stockLevels };
       },
     );
   }

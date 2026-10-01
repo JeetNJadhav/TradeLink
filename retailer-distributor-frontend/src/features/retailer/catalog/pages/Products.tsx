@@ -3,7 +3,7 @@ import ProductSearch from "../components/ProductSearch";
 import useProductSearch from "../hooks/useProductSearch";
 
 const Products = () => {
-  const { products, loading, error, search } = useProductSearch();
+  const { products, loading, error, hasSearched, search } = useProductSearch();
 
   return (
     <div className="products">
@@ -11,11 +11,15 @@ const Products = () => {
 
       <ProductSearch onSearch={search} />
 
+      {!hasSearched && <p>Search by product, brand or distributor.</p>}
+
       {loading && <p>Searching...</p>}
 
       {error && <p>{error}</p>}
 
-      {!loading && !error && products.length === 0 && <p>No products found.</p>}
+      {hasSearched && !loading && !error && products.length === 0 && (
+        <p>No products found.</p>
+      )}
 
       <div className="product-grid">
         {products.map((product) => (

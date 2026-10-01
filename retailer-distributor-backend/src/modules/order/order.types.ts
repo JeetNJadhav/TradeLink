@@ -40,6 +40,17 @@ export interface Order {
   orderItems: OrderItem[];
 }
 
+// What is left of a product at the distributor after an order reserved some.
+export interface StockLevel {
+  productId: string;
+  stock: number;
+}
+
+export interface PlacedOrder {
+  order: Order;
+  stockLevels: StockLevel[];
+}
+
 export interface NewOrderItem {
   distributorProductId: string;
   quantity: number;

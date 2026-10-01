@@ -1,3 +1,4 @@
+import type { MouseEvent, ReactNode } from "react";
 import type { ProductSuggestion } from "../types/productSearch";
 
 interface ProductSuggestionsProps {
@@ -6,6 +7,16 @@ interface ProductSuggestionsProps {
   onSelect: (suggestion: ProductSuggestion) => void;
 }
 
+// Keeps focus in the search input while the list is clicked, so the list is
+// not closed by the input's blur before the click lands.
+const keepInputFocused = (event: MouseEvent) => event.preventDefault();
+
+const SuggestionList = ({ children }: { children: ReactNode }) => (
+  <div className="suggestions" onMouseDown={keepInputFocused}>
+    {children}
+  </div>
+);
+
 const ProductSuggestions = ({
   suggestions,
   loading,
@@ -13,22 +24,22 @@ const ProductSuggestions = ({
 }: ProductSuggestionsProps) => {
   if (loading) {
     return (
-      <div className="suggestions">
+      <SuggestionList>
         <div className="suggestion-item">Searching...</div>
-      </div>
+      </SuggestionList>
     );
   }
 
   if (suggestions.length === 0) {
     return (
-      <div className="suggestions">
-        <div className="suggestion-item">No products found</div>
-      </div>
+      <SuggestionList>
+        <div className="suggestion-item">No suggestions found</div>
+      </SuggestionList>
     );
   }
 
   return (
-    <div className="suggestions">
+    <SuggestionList>
       {suggestions.map((suggestion) => (
         <button
           type="button"
@@ -39,7 +50,7 @@ const ProductSuggestions = ({
           {suggestion.label}
         </button>
       ))}
-    </div>
+    </SuggestionList>
   );
 };
 
