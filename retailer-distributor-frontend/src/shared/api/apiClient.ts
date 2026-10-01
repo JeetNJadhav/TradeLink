@@ -1,33 +1,26 @@
 import axios, {
-  type AxiosError,
   type AxiosInstance,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { LOGIN_API, LOGOUT_API, REFRESH_API } from "./api";
+import { env } from "../config/env";
+import { REFRESH_API } from "./api";
+import { ApiError, toApiError } from "./ApiError";
+import { emitSessionExpired } from "./authEvents";
+import { getCsrfToken, isCsrfProtectedMethod, setCsrfToken } from "./csrf";
 
-const CSRF_COOKIE_NAME = import.meta.env.VITE_CSRF_COOKIE_NAME || "csrfToken";
-const CSRF_HEADER_NAME =
-  import.meta.env.VITE_CSRF_HEADER_NAME || "x-csrf-token";
+declare module "axios" {
+  interface AxiosRequestConfig {
+    // Set on requests that must not trigger a token refresh (login, refresh, logout).
+    skipAuthRefresh?: boolean;
+  }
+}
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const readCookie = (name: string): string | null => {
-  const encodedName = encodeURIComponent(name);
-  const cookie = document.cookie
-    .split("; ")
-    .find((item) => item.startsWith(`${encodedName}=`));
-
-  if (!cookie) return null;
-
-  return decodeURIComponent(cookie.substring(encodedName.length + 1));
-};
-
-const isCsrfProtectedMethod = (method?: string) =>
-  ["post", "put", "patch", "delete"].includes(method?.toLowerCase() ?? "");
-
 const apiClient: AxiosInstance = axios.create({
+  baseURL: env.apiUrl,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -36,66 +29,81 @@ const apiClient: AxiosInstance = axios.create({
 
 let refreshPromise: Promise<void> | null = null;
 
-export const refreshAccessToken = (): Promise<void> => {
-  if (!refreshPromise) {
-    refreshPromise = axios
-      .post(REFRESH_API, undefined, {
-        withCredentials: true,
-        headers: getCsrfHeaders(),
-      })
-      .then(() => undefined)
-      .finally(() => {
-        refreshPromise = null;
-      });
+const requestRefresh = async (): Promise<void> => {
+  try {
+    await apiClient.post(REFRESH_API, undefined, { skipAuthRefresh: true });
+  } finally {
+    refreshPromise = null;
   }
-  return refreshPromise;
-};
-const getCsrfHeaders = (): Record<string, string> => {
-  const csrfToken = readCookie(CSRF_COOKIE_NAME);
-  return csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {};
 };
 
-apiClient.interceptors.request.use((config) => {
-  if (isCsrfProtectedMethod(config.method)) {
-    const csrfHeaders = getCsrfHeaders();
-    Object.entries(csrfHeaders).forEach(([name, value]) => {
-      config.headers.set(name, value);
-    });
+// Concurrent callers share one refresh so the refresh token is rotated only once.
+const refreshAccessToken = (): Promise<void> => {
+  refreshPromise ??= requestRefresh();
+  return refreshPromise;
+};
+
+// A rejected refresh means the session is over; a network failure does not.
+const refreshSession = async (): Promise<void> => {
+  try {
+    await refreshAccessToken();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      setCsrfToken(null);
+      emitSessionExpired();
+    }
+    throw error;
   }
+};
+
+apiClient.interceptors.request.use(async (config) => {
+  if (!isCsrfProtectedMethod(config.method) || config.skipAuthRefresh) {
+    return config;
+  }
+
+  // No token in memory and no readable cookie: a refresh returns a fresh one.
+  if (!getCsrfToken()) await refreshSession();
+
+  const csrfToken = getCsrfToken();
+  if (csrfToken) config.headers.set(env.csrfHeaderName, csrfToken);
 
   return config;
 });
 
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const config = error.config as RetryableRequestConfig | undefined;
+  (response) => {
+    const csrfToken = (response.data as { data?: { csrfToken?: unknown } })
+      ?.data?.csrfToken;
+    if (typeof csrfToken === "string") setCsrfToken(csrfToken);
+
+    return response;
+  },
+  async (error: unknown) => {
+    const config = axios.isAxiosError(error)
+      ? (error.config as RetryableRequestConfig | undefined)
+      : undefined;
+    const status = axios.isAxiosError(error)
+      ? error.response?.status
+      : undefined;
+
+    // 401: the access token expired. 403 on a write: the CSRF token may have
+    // been rotated by another tab. A refresh fixes both, so retry once.
+    const isRecoverable =
+      status === 401 ||
+      (status === 403 && isCsrfProtectedMethod(config?.method));
 
     if (
-      error.response?.status !== 401 ||
+      !isRecoverable ||
       !config ||
       config._retry ||
-      config.url === REFRESH_API ||
-      config.url === LOGIN_API ||
-      config.url === LOGOUT_API
+      config.skipAuthRefresh
     ) {
-      throw error;
+      throw toApiError(error);
     }
 
     config._retry = true;
-
-    if (!refreshPromise) {
-      refreshPromise = refreshAccessToken().finally(() => {
-        refreshPromise = null;
-      });
-    }
-
-    try {
-      await refreshPromise;
-      return apiClient.request(config);
-    } catch (refreshError) {
-      throw refreshError;
-    }
+    await refreshSession();
+    return apiClient.request(config);
   },
 );
 

@@ -1,6 +1,6 @@
 import { AuthError, RefreshTokenReuseError } from "./auth.errors";
 import type { AuthRepository } from "./auth.repository";
-import { AuthenticatedUser, Role } from "./auth.types";
+import { AuthenticatedUser, Role, UserRecord } from "./auth.types";
 import type { PasswordHasher } from "./password.service";
 import type { TokenService } from "./token.service";
 
@@ -9,6 +9,15 @@ const toAuthenticatedUser = (user: {
   role: Role;
 }): AuthenticatedUser => ({
   userId: user.id,
+  role: user.role,
+});
+
+// The user fields that are safe to send to the client.
+const toPublicUser = (user: UserRecord) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
   role: user.role,
 });
 
@@ -41,7 +50,11 @@ export class AuthService {
       refreshToken,
     );
 
-    return { accessToken, refreshToken: refreshToken.token, authenticatedUser };
+    return {
+      accessToken,
+      refreshToken: refreshToken.token,
+      user: toPublicUser(user),
+    };
   }
 
   async refresh(rawRefreshToken: string) {
@@ -81,7 +94,7 @@ export class AuthService {
         authenticatedUser.role,
       ),
       refreshToken: nextRefreshToken.token,
-      authenticatedUser,
+      user: toPublicUser(user),
     };
   }
 
@@ -98,12 +111,6 @@ export class AuthService {
       authenticatedUser.userId,
     );
     if (!user) throw new AuthError("User no longer exists");
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-    };
+    return toPublicUser(user);
   }
 }

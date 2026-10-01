@@ -12,9 +12,10 @@ import { generateCsrfToken } from "./csrf.service";
  *
  * Access token  -> HttpOnly cookie
  * Refresh token -> HttpOnly cookie
- * CSRF token    -> readable cookie
+ * CSRF token    -> readable cookie + response body
  *
- * Access/refresh tokens are NOT returned to React.
+ * Access/refresh tokens are NOT returned to React. The CSRF token is, so the
+ * client can still send the header when it cannot read the cookie (cross-site).
  */
 export const createLoginHandler =
   (authService: AuthService) =>
@@ -26,13 +27,15 @@ export const createLoginHandler =
 
     const result = await authService.login(email, password);
 
+    const csrfToken = generateCsrfToken();
+
     setAuthCookies(h, {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
-      csrfToken: generateCsrfToken(),
+      csrfToken,
     });
 
-    return successResponse(h, { user: result.authenticatedUser });
+    return successResponse(h, { user: result.user, csrfToken });
   };
 
 /**
@@ -57,13 +60,15 @@ export const createRefreshHandler =
 
       const result = await authService.refresh(refreshToken);
 
+      const csrfToken = generateCsrfToken();
+
       setAuthCookies(h, {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
-        csrfToken: generateCsrfToken(),
+        csrfToken,
       });
 
-      return successResponse(h, { user: result.authenticatedUser });
+      return successResponse(h, { user: result.user, csrfToken });
     } catch (error) {
       // A failed refresh ends the session; the error handler builds the response.
       if (error instanceof AuthError) {

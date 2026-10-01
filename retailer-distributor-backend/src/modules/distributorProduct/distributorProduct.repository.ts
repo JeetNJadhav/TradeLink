@@ -24,10 +24,11 @@ export interface DistributorProductRepository {
     productId: string,
   ): Promise<DistributorProductPricing | null>;
 
-  // Decrements stock only if enough remains. Returns false when it does not.
+  // Decrements stock only if enough remains. Returns the stock left after the
+  // reservation, or null when there was not enough.
   reserveStock(
     distributorId: string,
     productId: string,
     quantity: number,
-  ): Promise<boolean>;
+  ): Promise<number | null>;
 }

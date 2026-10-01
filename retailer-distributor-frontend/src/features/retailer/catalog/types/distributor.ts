@@ -1,38 +1,37 @@
+import type { ApiResponse } from "../../../../shared/api/types";
+
 export interface DistributorProductItem {
   id: string;
-  price: string;
+  price: number;
   stock: number;
   product: {
     id: string;
     name: string;
-    description?: string;
-    brand?: string;
-    category?: string;
+    description: string | null;
+    brand: string;
+    category: string;
   };
+}
+
+export interface DistributorSummary {
+  id: string;
+  businessName: string;
+  contactInfo: string | null;
+  locations: Array<{
+    city: string;
+    address: string;
+  }>;
 }
 
 export interface DistributorProductDetails extends DistributorProductItem {
-  distributor: {
-    id: string;
-    businessName: string;
-    contactInfo?: string;
-    locations?: Array<{
-      city?: string;
-      address?: string;
-    }>;
-  };
+  distributor: DistributorSummary;
 }
 
-export interface DistributorProductsResponse {
-  success: boolean;
-  data: {
-    products: DistributorProductItem[];
-  };
-}
+export type DistributorProductsResponse = ApiResponse<{
+  products: DistributorProductItem[];
+}>;
 
-export interface DistributorProductDetailsResponse {
-  success: boolean;
-  data: {
-    distributorProduct: DistributorProductDetails;
-  };
-}
+// distributorProduct is null when no listing has that id.
+export type DistributorProductDetailsResponse = ApiResponse<{
+  distributorProduct: DistributorProductDetails | null;
+}>;

@@ -1,9 +1,11 @@
+import type { ApiResponse } from "../../../../shared/api/types";
+
 export interface ProductSearchResult {
   id: string;
   productId: string;
   productName: string;
   productCategory: string;
-  brand?: string;
+  brand: string;
 
   distributorId: string;
   distributorName: string;
@@ -26,3 +28,11 @@ export interface ProductSuggestion {
   id: string;
   label: string;
 }
+
+export type ProductSearchResponse = ApiResponse<{
+  products: ProductSearchResult[];
+}>;
+
+export type ProductSuggestionsResponse = ApiResponse<{
+  suggestions: ProductSuggestion[];
+}>;

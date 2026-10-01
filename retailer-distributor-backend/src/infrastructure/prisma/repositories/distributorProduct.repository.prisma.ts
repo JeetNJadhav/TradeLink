@@ -115,13 +115,14 @@ export class PrismaDistributorProductRepository
 
   // The stock update is conditional: PostgreSQL updates the row only when
   // enough stock remains. This prevents two concurrent orders from both
-  // successfully reserving the same inventory.
+  // successfully reserving the same inventory. The same statement returns the
+  // stock that is left, so the caller never reads a stale value.
   async reserveStock(
     distributorId: string,
     productId: string,
     quantity: number,
-  ): Promise<boolean> {
-    const updated = await this.prisma.distributorProduct.updateMany({
+  ): Promise<number | null> {
+    const updated = await this.prisma.distributorProduct.updateManyAndReturn({
       where: {
         distributorId,
         productId,
@@ -134,8 +135,11 @@ export class PrismaDistributorProductRepository
           decrement: quantity,
         },
       },
+      select: {
+        stock: true,
+      },
     });
 
-    return updated.count === 1;
+    return updated[0]?.stock ?? null;
   }
 }
