@@ -2,7 +2,7 @@ import { Server } from "@hapi/hapi";
 import { SearchService } from "./search.service";
 import Joi from "joi";
 import {
-  createSeacrhSuggestions,
+  createSeacrhSuggestionsHandler,
   createSearchHandler,
 } from "./search.controller";
 import { ROUTES } from "../../config/routes";
@@ -36,17 +36,17 @@ export const registerSearchRoutes = (
   server.route([
     {
       method: "GET",
-      path: ROUTES.SEARCH.SEARCH_QUERY,
+      path: ROUTES.SEARCH.SUGGESTIONS,
       options: {
         auth: "access-token",
         validate: { query: suggestionsQuerySchema },
       },
-      handler: createSeacrhSuggestions(searchService),
+      handler: createSeacrhSuggestionsHandler(searchService),
     },
 
     {
       method: "GET",
-      path: ROUTES.DISTRIBUTOR_PRODUCTS.BY_ID,
+      path: ROUTES.SEARCH.SEARCH_QUERY,
       options: {
         auth: "access-token",
         validate: { query: searchQuerySchema },

@@ -1,3 +1,5 @@
+import type { DistributorProductWithProduct } from "../distributorProduct/distributorProduct.types";
+
 export interface DistributorLocation {
   id: string;
   address: string;
@@ -10,7 +12,7 @@ export interface DistributorLocation {
   distributorId: string | null;
 }
 
-export interface Distributor {
+export interface DistributorWithLocations {
   id: string;
   businessName: string;
   contactInfo: string | null;
@@ -20,19 +22,6 @@ export interface Distributor {
   locations: DistributorLocation[];
 }
 
-export interface DistributorProductWithDistributor {
-  id: string;
-  price: number;
-  stock: number;
-  createdAt: Date;
-  updatedAt: Date;
-  distributorId: string;
-  productId: string;
-  distributor: Distributor;
-}
-
-export interface ProductRepository {
-  findDistributorsByProductId(
-    productId: string,
-  ): Promise<DistributorProductWithDistributor[]>;
+export interface DistributorWithProducts extends DistributorWithLocations {
+  distributorProducts: DistributorProductWithProduct[];
 }

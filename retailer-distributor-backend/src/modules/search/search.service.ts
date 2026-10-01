@@ -1,9 +1,9 @@
+import { SearchRepository } from "./search.repository";
 import {
   ProductSearchParams,
   ProductSuggestion,
   SearchDocument,
-  SearchRepository,
-} from "./search.repository";
+} from "./search.types";
 
 export class SearchService {
   constructor(private readonly searchRepository: SearchRepository) {}

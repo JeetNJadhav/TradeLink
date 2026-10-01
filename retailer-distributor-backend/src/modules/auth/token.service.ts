@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import type { StringValue } from "ms";
 
-import { AccessTokenClaims, Role } from "./auth.types";
+import { AccessTokenClaims, Role, ROLES } from "./auth.types";
 
 const getEnv = (name: string): string => {
   const value = process.env[name];
@@ -51,7 +51,7 @@ export const verifyAccessToken = (token: string): AccessTokenClaims => {
 
   if (
     typeof decoded.sub !== "string" ||
-    !["RETAILER", "DISTRIBUTOR"].includes(decoded.role ?? "") ||
+    !(ROLES as readonly string[]).includes(decoded.role ?? "") ||
     decoded.type !== "access"
   ) {
     throw new Error("Invalid access token claims");

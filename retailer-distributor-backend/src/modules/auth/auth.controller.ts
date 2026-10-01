@@ -272,7 +272,7 @@ export const logoutHandler = async (request: Request, h: ResponseToolkit) => {
  */
 export const meHandler = async (request: Request, h: ResponseToolkit) => {
   try {
-    const authenticatedUser = request.app.authenticatedUser;
+    const authenticatedUser = request.auth.credentials;
 
     if (!authenticatedUser) {
       return h
