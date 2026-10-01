@@ -1,9 +1,19 @@
 import bcrypt from "bcrypt";
 
+export interface PasswordHasher {
+  hash(password: string): Promise<string>;
+
+  verify(password: string, passwordHash: string): Promise<boolean>;
+}
+
 const BCRYPT_ROUNDS = 12;
 
-export const hashPassword = async (password: string) =>
-  bcrypt.hash(password, BCRYPT_ROUNDS);
+export class BcryptPasswordHasher implements PasswordHasher {
+  async hash(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
+  }
 
-export const verifyPassword = async (password: string, passwordHash: string) =>
-  bcrypt.compare(password, passwordHash);
+  async verify(password: string, passwordHash: string): Promise<boolean> {
+    return bcrypt.compare(password, passwordHash);
+  }
+}

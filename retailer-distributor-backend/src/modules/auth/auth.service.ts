@@ -1,25 +1,8 @@
+import { AuthError, RefreshTokenReuseError } from "./auth.errors";
+import type { AuthRepository } from "./auth.repository";
 import { AuthenticatedUser, Role } from "./auth.types";
-import {
-  createRefreshSession,
-  findRefreshSession,
-  findUserByEmail,
-  findUserById,
-  revokeAllRefreshTokensForUser,
-  revokeRefreshToken,
-  rotateRefreshSession,
-} from "./auth.repository";
-import { verifyPassword } from "./password.service";
-import { createAccessToken } from "./token.service";
-
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode = 401,
-  ) {
-    super(message);
-    this.name = "AuthError";
-  }
-}
+import type { PasswordHasher } from "./password.service";
+import type { TokenService } from "./token.service";
 
 const toAuthenticatedUser = (user: {
   id: string;
@@ -29,78 +12,98 @@ const toAuthenticatedUser = (user: {
   role: user.role,
 });
 
-export const login = async (email: string, password: string) => {
-  const user = await findUserByEmail(email);
+export class AuthService {
+  constructor(
+    private readonly authRepository: AuthRepository,
+    private readonly passwordHasher: PasswordHasher,
+    private readonly tokenService: TokenService,
+  ) {}
 
-  if (!user || !(await verifyPassword(password, user.password)))
-    throw new AuthError("Invalid email or password");
+  async login(email: string, password: string) {
+    const user = await this.authRepository.findUserByEmail(email);
 
-  const authenticatedUser = toAuthenticatedUser({
-    id: user.id,
-    role: user.role,
-  });
+    if (
+      !user ||
+      !(await this.passwordHasher.verify(password, user.password))
+    )
+      throw new AuthError("Invalid email or password");
 
-  const accessToken = createAccessToken(
-    authenticatedUser.userId,
-    authenticatedUser.role,
-  );
+    const authenticatedUser = toAuthenticatedUser(user);
 
-  const refresh = await createRefreshSession(authenticatedUser.userId);
+    const accessToken = this.tokenService.createAccessToken(
+      authenticatedUser.userId,
+      authenticatedUser.role,
+    );
 
-  return { accessToken, refreshToken: refresh.token, authenticatedUser };
-};
+    const refreshToken = this.tokenService.createRefreshToken();
+    await this.authRepository.createRefreshSession(
+      authenticatedUser.userId,
+      refreshToken,
+    );
 
-export const refresh = async (rawRefreshToken: string) => {
-  const session = await findRefreshSession(rawRefreshToken);
-  if (!session) throw new AuthError("Invalid refresh token");
-  if (session.revokedAt) {
-    if (session.replacedByTokenId)
-      await revokeAllRefreshTokensForUser(session.userId);
-    throw new AuthError("Refresh token is no longer valid");
+    return { accessToken, refreshToken: refreshToken.token, authenticatedUser };
   }
-  if (session.expiresAt <= new Date()) {
-    await revokeRefreshToken(session.id);
-    throw new AuthError("Refresh token has expired");
-  }
-  const user = await findUserById(session.userId);
-  if (!user) throw new AuthError("User no longer exists");
-  const authenticatedUser = toAuthenticatedUser({
-    id: user.id,
-    role: user.role,
-  });
-  try {
-    const rotated = await rotateRefreshSession(session.id, session.userId);
+
+  async refresh(rawRefreshToken: string) {
+    const session = await this.authRepository.findRefreshSessionByTokenHash(
+      this.tokenService.hashRefreshToken(rawRefreshToken),
+    );
+    if (!session) throw new AuthError("Invalid refresh token");
+    if (session.revokedAt) {
+      if (session.replacedByTokenId)
+        await this.authRepository.revokeAllRefreshTokensForUser(session.userId);
+      throw new AuthError("Refresh token is no longer valid");
+    }
+    if (session.expiresAt <= new Date()) {
+      await this.authRepository.revokeRefreshToken(session.id);
+      throw new AuthError("Refresh token has expired");
+    }
+    const user = await this.authRepository.findUserById(session.userId);
+    if (!user) throw new AuthError("User no longer exists");
+    const authenticatedUser = toAuthenticatedUser(user);
+    const nextRefreshToken = this.tokenService.createRefreshToken();
+    try {
+      await this.authRepository.rotateRefreshSession(
+        session.id,
+        session.userId,
+        nextRefreshToken,
+      );
+    } catch (error) {
+      if (error instanceof RefreshTokenReuseError) {
+        await this.authRepository.revokeAllRefreshTokensForUser(session.userId);
+        throw new AuthError("Refresh token reuse detected");
+      }
+      throw error;
+    }
     return {
-      accessToken: createAccessToken(
+      accessToken: this.tokenService.createAccessToken(
         authenticatedUser.userId,
         authenticatedUser.role,
       ),
-      refreshToken: rotated.token,
+      refreshToken: nextRefreshToken.token,
       authenticatedUser,
     };
-  } catch (error) {
-    if (error instanceof Error && error.message === "REFRESH_TOKEN_REUSE") {
-      await revokeAllRefreshTokensForUser(session.userId);
-      throw new AuthError("Refresh token reuse detected");
-    }
-    throw error;
   }
-};
 
-export const logout = async (rawRefreshToken?: string) => {
-  if (!rawRefreshToken) return;
-  const session = await findRefreshSession(rawRefreshToken);
-  if (session) await revokeRefreshToken(session.id);
-};
+  async logout(rawRefreshToken?: string) {
+    if (!rawRefreshToken) return;
+    const session = await this.authRepository.findRefreshSessionByTokenHash(
+      this.tokenService.hashRefreshToken(rawRefreshToken),
+    );
+    if (session) await this.authRepository.revokeRefreshToken(session.id);
+  }
 
-export const getCurrentUser = async (authenticatedUser: AuthenticatedUser) => {
-  const user = await findUserById(authenticatedUser.userId);
-  if (!user) throw new AuthError("User no longer exists");
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-  };
-};
+  async getCurrentUser(authenticatedUser: AuthenticatedUser) {
+    const user = await this.authRepository.findUserById(
+      authenticatedUser.userId,
+    );
+    if (!user) throw new AuthError("User no longer exists");
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    };
+  }
+}

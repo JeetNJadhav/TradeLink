@@ -1,6 +1,7 @@
 import { Request, ResponseToolkit, Server } from "@hapi/hapi";
-import { verifyAccessToken } from "../modules/auth/token.service";
+import { ACCESS_COOKIE_NAME } from "../config/auth.config";
 import type { Role } from "../modules/auth/auth.types";
+import type { TokenService } from "../modules/auth/token.service";
 
 // Tell Hapi what the "access-cookie" scheme below puts in request.auth.credentials.
 declare module "@hapi/hapi/lib/types/request" {
@@ -13,8 +14,6 @@ declare module "@hapi/hapi/lib/types/request" {
   }
 }
 
-const ACCESS_COOKIE_NAME = process.env.ACCESS_COOKIE_NAME || "accessToken";
-
 const unauthorized = (h: ResponseToolkit, message: string) =>
   h
     .response({
@@ -24,7 +23,10 @@ const unauthorized = (h: ResponseToolkit, message: string) =>
     .code(401)
     .takeover();
 
-export const registerAuthentication = (server: Server): void => {
+export const registerAuthentication = (
+  server: Server,
+  tokenService: Pick<TokenService, "verifyAccessToken">,
+): void => {
   server.auth.scheme("access-cookie", () => ({
     authenticate: (request: Request, h: ResponseToolkit) => {
       const token = request.state[ACCESS_COOKIE_NAME] as string | undefined;
@@ -34,7 +36,7 @@ export const registerAuthentication = (server: Server): void => {
       }
 
       try {
-        const claims = verifyAccessToken(token);
+        const claims = tokenService.verifyAccessToken(token);
 
         return h.authenticated({
           credentials: {

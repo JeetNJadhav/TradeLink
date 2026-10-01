@@ -1,19 +1,17 @@
 import { OpenSearchRepository } from "../repositories/opensearch.repository";
+import opensearchClient from "../openSearch.client";
 import { prisma } from "../../prisma/prisma.client";
+import { PrismaDistributorProductRepository } from "../../prisma/repositories/distributorProduct.repository.prisma";
+import type { DistributorProductRepository } from "../../../modules/distributorProduct/distributorProduct.repository";
+import type { SearchIndexer } from "../../../modules/search/search.repository";
 
-const searchRepository = new OpenSearchRepository();
+const distributorProductRepository: DistributorProductRepository =
+  new PrismaDistributorProductRepository(prisma);
+const searchIndexer: SearchIndexer = new OpenSearchRepository(opensearchClient);
 
 const indexProducts = async () => {
-  const distributorProducts = await prisma.distributorProduct.findMany({
-    include: {
-      product: true,
-      distributor: {
-        include: {
-          locations: true,
-        },
-      },
-    },
-  });
+  const distributorProducts =
+    await distributorProductRepository.findAllWithDetails();
 
   console.log(`Found ${distributorProducts.length} distributor products`);
 
@@ -27,7 +25,7 @@ const indexProducts = async () => {
       continue;
     }
 
-    await searchRepository.indexProductDistributor({
+    await searchIndexer.indexProductDistributor({
       id: distributorProduct.id,
       productId: distributorProduct.productId,
       productName: distributorProduct.product.name,
@@ -35,11 +33,11 @@ const indexProducts = async () => {
       brand: distributorProduct.product.brand,
       distributorId: distributorProduct.distributorId,
       distributorName: distributorProduct.distributor.businessName,
-      price: Number(distributorProduct.price),
+      price: distributorProduct.price,
       stock: distributorProduct.stock,
       location: {
-        lat: Number(location.latitude),
-        lon: Number(location.longitude),
+        lat: location.latitude,
+        lon: location.longitude,
       },
       updatedAt: distributorProduct.updatedAt.toISOString(),
     });

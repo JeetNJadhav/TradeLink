@@ -1,0 +1,86 @@
+import type { PrismaClient } from "../../../generated/prisma/client";
+import { RefreshTokenReuseError } from "../../../modules/auth/auth.errors";
+import type { AuthRepository } from "../../../modules/auth/auth.repository";
+import type {
+  RefreshSession,
+  RefreshTokenRecord,
+  UserRecord,
+} from "../../../modules/auth/auth.types";
+
+export class PrismaAuthRepository implements AuthRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async findUserByEmail(email: string): Promise<UserRecord | null> {
+    return this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+  }
+
+  async findUserById(userId: string): Promise<UserRecord | null> {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+  }
+
+  async createRefreshSession(
+    userId: string,
+    token: RefreshTokenRecord,
+  ): Promise<void> {
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: token.tokenHash,
+        expiresAt: token.expiresAt,
+      },
+    });
+  }
+
+  async findRefreshSessionByTokenHash(
+    tokenHash: string,
+  ): Promise<RefreshSession | null> {
+    return this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+  }
+
+  async rotateRefreshSession(
+    oldTokenId: string,
+    userId: string,
+    next: RefreshTokenRecord,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Atomically consume the old token. Only one concurrent refresh request can win.
+      const consumed = await tx.refreshToken.updateMany({
+        where: { id: oldTokenId, userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+      if (consumed.count !== 1) {
+        throw new RefreshTokenReuseError();
+      }
+
+      const replacement = await tx.refreshToken.create({
+        data: { userId, tokenHash: next.tokenHash, expiresAt: next.expiresAt },
+      });
+
+      await tx.refreshToken.update({
+        where: { id: oldTokenId },
+        data: { replacedByTokenId: replacement.id },
+      });
+    });
+  }
+
+  async revokeRefreshToken(tokenId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { id: tokenId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+}

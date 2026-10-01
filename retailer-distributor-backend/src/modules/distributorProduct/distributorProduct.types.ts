@@ -33,3 +33,9 @@ export interface DistributorProductWithDetails
   extends DistributorProductWithProduct {
   distributor: DistributorWithLocations;
 }
+
+// The price is kept as an exact decimal string so order amounts are not rounded.
+export interface DistributorProductPricing {
+  id: string;
+  unitPrice: string;
+}

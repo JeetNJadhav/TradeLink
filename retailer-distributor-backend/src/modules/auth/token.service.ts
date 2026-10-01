@@ -3,84 +3,81 @@ import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import type { StringValue } from "ms";
 
-import { AccessTokenClaims, Role, ROLES } from "./auth.types";
+import {
+  AccessTokenClaims,
+  RefreshTokenData,
+  Role,
+  ROLES,
+} from "./auth.types";
 
-const getEnv = (name: string): string => {
-  const value = process.env[name];
+export interface TokenService {
+  createAccessToken(userId: string, role: Role): string;
 
-  if (!value) {
-    throw new Error(`${name} is not configured`);
-  }
+  verifyAccessToken(token: string): AccessTokenClaims;
 
-  return value;
-};
+  createRefreshToken(): RefreshTokenData;
 
-const ACCESS_TOKEN_TTL = getEnv("ACCESS_TOKEN_TTL") as StringValue;
-
-const REFRESH_TOKEN_TTL_DAYS = Number(getEnv("REFRESH_TOKEN_TTL_DAYS"));
-
-if (!Number.isFinite(REFRESH_TOKEN_TTL_DAYS) || REFRESH_TOKEN_TTL_DAYS <= 0) {
-  throw new Error("REFRESH_TOKEN_TTL_DAYS must be a positive number");
+  hashRefreshToken(token: string): string;
 }
 
-const REFRESH_TOKEN_TTL_MS = REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+export interface JwtTokenOptions {
+  accessTokenTtl: StringValue;
+  refreshTokenTtlMs: number;
+  getSecret: () => string;
+}
 
-const getJwtSecret = () => getEnv("JWT_ACCESS_SECRET");
+export class JwtTokenService implements TokenService {
+  constructor(private readonly options: JwtTokenOptions) {}
 
-export const createAccessToken = (userId: string, role: Role) =>
-  jwt.sign(
-    {
-      sub: userId,
-      role,
-      type: "access",
-    },
-    getJwtSecret(),
-    {
-      expiresIn: ACCESS_TOKEN_TTL,
-      algorithm: "HS256",
-    },
-  );
-
-export const verifyAccessToken = (token: string): AccessTokenClaims => {
-  const decoded = jwt.verify(token, getJwtSecret(), {
-    algorithms: ["HS256"],
-  }) as jwt.JwtPayload & {
-    role?: Role;
-    type?: string;
-  };
-
-  if (
-    typeof decoded.sub !== "string" ||
-    !(ROLES as readonly string[]).includes(decoded.role ?? "") ||
-    decoded.type !== "access"
-  ) {
-    throw new Error("Invalid access token claims");
+  createAccessToken(userId: string, role: Role): string {
+    return jwt.sign(
+      {
+        sub: userId,
+        role,
+        type: "access",
+      },
+      this.options.getSecret(),
+      {
+        expiresIn: this.options.accessTokenTtl,
+        algorithm: "HS256",
+      },
+    );
   }
 
-  return {
-    sub: decoded.sub,
-    role: decoded.role as Role,
-    type: "access",
-  };
-};
+  verifyAccessToken(token: string): AccessTokenClaims {
+    const decoded = jwt.verify(token, this.options.getSecret(), {
+      algorithms: ["HS256"],
+    }) as jwt.JwtPayload & {
+      role?: Role;
+      type?: string;
+    };
 
-export const createRefreshToken = () => {
-  const token = crypto.randomBytes(64).toString("base64url");
+    if (
+      typeof decoded.sub !== "string" ||
+      !(ROLES as readonly string[]).includes(decoded.role ?? "") ||
+      decoded.type !== "access"
+    ) {
+      throw new Error("Invalid access token claims");
+    }
 
-  return {
-    token,
-    tokenHash: hashRefreshToken(token),
-    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-  };
-};
+    return {
+      sub: decoded.sub,
+      role: decoded.role as Role,
+      type: "access",
+    };
+  }
 
-export const hashRefreshToken = (token: string) =>
-  crypto.createHash("sha256").update(token).digest("hex");
+  createRefreshToken(): RefreshTokenData {
+    const token = crypto.randomBytes(64).toString("base64url");
 
-export const REFRESH_COOKIE_MAX_AGE_SECONDS = REFRESH_TOKEN_TTL_MS / 1000;
+    return {
+      token,
+      tokenHash: this.hashRefreshToken(token),
+      expiresAt: new Date(Date.now() + this.options.refreshTokenTtlMs),
+    };
+  }
 
-export const ACCESS_TOKEN_TTL_SECONDS = Number(
-  process.env.ACCESS_TOKEN_TTL_SECONDS || 900,
-);
-
-export const ACCESS_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_TTL_SECONDS;
+  hashRefreshToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
+}

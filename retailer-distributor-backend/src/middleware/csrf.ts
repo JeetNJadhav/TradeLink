@@ -1,14 +1,20 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
-import { validateCsrfToken } from "../modules/auth/auth.controller";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "../config/auth.config";
+import { isValidCsrfToken } from "../modules/auth/csrf.service";
 
+/**
+ * Should be applied to state-changing requests (POST, PUT, PATCH, DELETE).
+ */
 export const requireCsrf = (request: Request, h: ResponseToolkit) => {
-  try {
-    validateCsrfToken(request);
-    return h.continue;
-  } catch {
+  const csrfCookie = request.state[CSRF_COOKIE_NAME] as string | undefined;
+  const csrfHeader = request.headers[CSRF_HEADER_NAME] as string | undefined;
+
+  if (!isValidCsrfToken(csrfCookie, csrfHeader)) {
     return h
       .response({ success: false, error: { message: "Invalid CSRF token" } })
       .code(403)
       .takeover();
   }
+
+  return h.continue;
 };
