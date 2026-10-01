@@ -3,7 +3,7 @@ import { Role } from "../modules/auth/auth.types";
 export const requireRole =
   (...allowedRoles: Role[]) =>
   (request: Request, h: ResponseToolkit) => {
-    const user = request.app.authenticatedUser;
+    const user = request.auth.credentials;
     if (!user)
       return h
         .response({

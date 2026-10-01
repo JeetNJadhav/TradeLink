@@ -1,9 +1,9 @@
+import { SearchRepository } from "../../../modules/search/search.repository";
 import {
   ProductSearchParams,
   ProductSuggestion,
   SearchDocument,
-  SearchRepository,
-} from "../../../modules/search/search.repository";
+} from "../../../modules/search/search.types";
 import opensearchClient from "../openSearch.client";
 
 const PRODUCTS_INDEX = "products";

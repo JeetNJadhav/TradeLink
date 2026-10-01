@@ -1,5 +1,17 @@
 import { Request, ResponseToolkit, Server } from "@hapi/hapi";
 import { verifyAccessToken } from "../modules/auth/token.service";
+import type { Role } from "../modules/auth/auth.types";
+
+// Tell Hapi what the "access-cookie" scheme below puts in request.auth.credentials.
+declare module "@hapi/hapi/lib/types/request" {
+  interface AuthCredentials<
+    AuthUser = UserCredentials,
+    AuthApp = AppCredentials,
+  > {
+    userId: string;
+    role: Role;
+  }
+}
 
 const ACCESS_COOKIE_NAME = process.env.ACCESS_COOKIE_NAME || "accessToken";
 

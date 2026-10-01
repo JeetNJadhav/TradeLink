@@ -19,16 +19,10 @@ export const createSearchHandler =
       sortBy,
     });
 
-    // return h.response({
-    //   success: true,
-    //   data: {
-    //     products: results,
-    //   },
-    // });
-    successResponse(h, { results });
+    return successResponse(h, { products: results });
   };
 
-export const createSeacrhSuggestions =
+export const createSeacrhSuggestionsHandler =
   (searchService: SearchService) =>
   async (request: Request, h: ResponseToolkit) => {
     const { q } = request.query as { q?: string };

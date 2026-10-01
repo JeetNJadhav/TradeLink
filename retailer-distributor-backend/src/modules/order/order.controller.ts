@@ -8,7 +8,7 @@ export const createOrderHandler = async (
 ) => {
   try {
     const input = request.payload as CreateOrderInput;
-    const { userId } = request.app.authenticatedUser!;
+    const { userId } = request.auth.credentials!;
     const order = await createOrder(userId, input);
 
     return successResponse(h, { order }, 201);

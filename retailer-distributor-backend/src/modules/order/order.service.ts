@@ -22,7 +22,7 @@ export class OrderError extends Error {
 }
 
 export const createOrder = async (
-  retailerId: string,
+  userId: string,
   input: CreateOrderInput,
 ) => {
   if (input.items.length === 0) {
@@ -41,8 +41,9 @@ export const createOrder = async (
   }
 
   return prisma.$transaction(async (tx) => {
+    // The authenticated user's id is User.id; the order belongs to their Retailer profile.
     const retailer = await tx.retailer.findUnique({
-      where: { id: retailerId },
+      where: { userId },
     });
 
     if (!retailer) {
@@ -92,7 +93,7 @@ export const createOrder = async (
 
     const order = await tx.order.create({
       data: {
-        retailerId,
+        retailerId: retailer.id,
         totalAmount,
         status: "PENDING",
         orderItems: {
