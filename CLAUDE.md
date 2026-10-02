@@ -24,9 +24,11 @@ npx prisma migrate dev --name x  # create + apply a migration
 npx prisma db seed               # runs prisma/seed_v2.ts — DESTRUCTIVE: deleteMany on every table first
 
 docker compose -f docker-compose.opensearch.yml up -d   # OpenSearch on :9200, security disabled
-npm run search:create-index   # src/scripts/create-products-index.ts — create the `products` index
-npm run search:reindex        # src/scripts/index-products.ts — reindex Postgres → OpenSearch
+npm run search:create-index   # src/scripts/create-products-index.ts — create the `products` index if it is missing
+npm run search:reindex        # src/scripts/index-products.ts — drop, recreate and refill the index from Postgres
 ```
+
+Seed users are `user<N>@seed.retaildist.local` with the password `SeedPassword123!`: users 1–600 are retailers, 601–750 distributors, the rest admins without a profile.
 
 There is no linter in the backend: `typescript-eslint` does not support TypeScript 7 yet. `tests/architecture.test.ts` enforces the module boundary instead (see Backend architecture). Services are tested against `tests/support/inMemoryOrderUnitOfWork.ts`, an in-memory `OrderUnitOfWork` that rolls back on a throw like the real one.
 
@@ -42,7 +44,7 @@ No tests are configured.
 
 ### Environment
 
-Backend `.env` — `src/config/env.ts` is the only place that reads `process.env`; it validates everything with Joi and throws at import time if a value is missing or invalid. Everything else, including the OpenSearch scripts, imports `env` from it (`auth.config.ts` derives the token and cookie constants). Required: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `ACCESS_TOKEN_TTL` (an `ms` string such as `15m`), `REFRESH_TOKEN_TTL_DAYS`. Optional: `OPENSEARCH_URL` (default `http://localhost:9200`), `HOST` (`localhost`), `PORT` (`3000`), `CORS_ORIGIN` (`http://localhost:5173`), `ACCESS_TOKEN_TTL_SECONDS` (access cookie max-age, default 900 — keep in sync with `ACCESS_TOKEN_TTL`), `COOKIE_SECURE`, `COOKIE_SAMESITE`, and the cookie/header name overrides. `.env.example` lists them all. A new variable is added to the `Env` interface and the schema in `env.ts`.
+Backend `.env` — `src/config/env.ts` is the only place that reads `process.env`; it validates everything with Joi and throws at import time if a value is missing or invalid. Everything else, including the OpenSearch scripts, imports `env` from it (`auth.config.ts` derives the token and cookie constants). Required: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `ACCESS_TOKEN_TTL` (an `ms` string such as `15m`), `REFRESH_TOKEN_TTL_DAYS`. Optional: `OPENSEARCH_URL` (default `http://localhost:9200`), `HOST` (`localhost`), `PORT` (`3000`), `CORS_ORIGIN` (`http://localhost:5173`), `ACCESS_TOKEN_TTL_SECONDS` (access cookie max-age, default 900 — keep in sync with `ACCESS_TOKEN_TTL`), `COOKIE_SECURE` (a boolean), `COOKIE_SAMESITE` (`None` is refused unless `COOKIE_SECURE=true`), and the cookie/header name overrides. `.env.example` lists them all. A new variable is added to the `Env` interface and the schema in `env.ts`.
 
 Frontend `.env` — `VITE_API_URL` is required (`src/shared/config/env.ts` throws without it). If the CSRF cookie/header names are overridden on the backend, the matching `VITE_CSRF_*` values must change too.
 
@@ -59,10 +61,11 @@ Conventions that span files:
 
 - **Routes** — every path comes from `ROUTES` in `src/config/routes.ts`, never a string literal. `{param}` names must match the Joi params schema. The frontend keeps its own copy of these paths in `src/shared/api/api.ts`; change both together.
 - **Responses** — success is `{ success: true, data }` via `successResponse` (`src/utils/response.ts`); failure is `{ success: false, error: { message } }`. Controllers wrap results under a named key (`{ order }`, `{ user }`, `{ products }`), which the frontend unwraps as `response.data.data.<key>`.
-- **Errors** — throw a subclass of `AppError` (`src/utils/errors.ts`) carrying a status code; the `onPreResponse` hook in `app.ts` hands it to `middleware/error-handler.ts`. Controllers don't build error responses. Middleware that must answer directly (auth scheme, `requireRole`, `requireCsrf`) uses `errorResponse` from `src/utils/response.ts`, never a hand-built envelope.
+- **Errors** — throw a subclass of `AppError` (`src/utils/errors.ts`) carrying a status code; the `onPreResponse` hook in `app.ts` hands it to `middleware/error-handler.ts`. Controllers don't build error responses. Any other error is logged and answered with a generic 500 — its message never reaches the client. Middleware that must answer directly (auth scheme, `requireRole`, `requireCsrf`) uses `errorResponse` from `src/utils/response.ts`, never a hand-built envelope.
+- **Catalog responses** — distributor data returned by catalog routes omits `userId` (`PublicDistributor`). A missing listing is `200` with `distributorProduct: null`, which the frontend renders as "Product not found".
 - **Catalog modules** — `product`, `distributor` and `distributorProduct` are separate modules. `distributorProduct` (one distributor's listing of one product) owns `DistributorProductRepository` and the `/distributor-products/{id}` route; `product` and `distributor` use that repository for their own routes (`/products/{id}/distributors`, `/distributors/{id}/products`).
 - **Prisma** — Prisma 7 with the `pg` driver adapter. The client is generated into `src/generated/prisma` (gitignored) and imported from there, not from `@prisma/client`. The datasource URL lives in `prisma.config.ts`, not `schema.prisma`. Repositories take `PrismaDb` (root client or transaction client) so the same class works inside a transaction. `Decimal` prices are converted at the repository boundary (`toNumber()` for reads, `toString()` for order pricing).
-- **Transactions** — order creation uses a unit of work: `OrderUnitOfWork` (interface in `modules/order`) is implemented by `PrismaOrderUnitOfWork`, which builds all needed repositories on one `$transaction` client. Stock is reserved with a conditional `updateMany` (`stock >= quantity`) so concurrent orders can't oversell; a failed reservation throws and rolls back the order.
+- **Transactions** — order creation uses a unit of work: `OrderUnitOfWork` (interface in `modules/order`) is implemented by `PrismaOrderUnitOfWork`, which builds all needed repositories on one `$transaction` client (`run`), or on the root client for work that only reads (`read`). Stock is reserved with a conditional `updateMany` (`stock >= quantity`) so concurrent orders can't oversell; a failed reservation throws and rolls back the order. Reservations are made in `productId` order so concurrent orders can't deadlock.
 - **Order ownership and status** — `Order` deliberately has no `distributorId` (an order may later span several distributors). The distributor is derived through `orderItems → distributorProduct`; the filter lives in one place, `soldBy` in `order.repository.prisma.ts`. Allowed status moves are declared only in `modules/order/order.transitions.ts`. Distributor decisions (`DistributorOrderService`) change status with a conditional `updateMany` on the current status, and a rejection releases the stock reserved at order time.
 - **DI style** — services are classes with constructor injection, except `distributor.service.ts`, which is deliberately a factory function (`createDistributorService`) kept as a comparison.
 
@@ -73,12 +76,12 @@ Cookie-based, no bearer tokens:
 - Login/refresh set three cookies (`modules/auth/auth.cookies.ts`): access JWT (HttpOnly, path `/`), refresh token (HttpOnly, path `/auth` only), CSRF token (readable, path `/`). The CSRF token is also returned in the response body.
 - `middleware/authentication.ts` registers the Hapi scheme `access-cookie` / strategy `access-token`, which puts `{ userId, role }` on `request.auth.credentials`. There is no default strategy — each protected route opts in with `options.auth: "access-token"`.
 - Role and CSRF checks are route `pre` handlers: `requireRole("RETAILER")` and `requireCsrf` (double-submit: cookie must equal the `x-csrf-token` header). State-changing routes need both, as in `order.routes.ts`.
-- Refresh tokens are stored hashed in `RefreshToken` and rotated on every refresh. Presenting an already-rotated token revokes every session for that user (reuse detection in `AuthService.refresh`).
+- Refresh tokens are stored hashed in `RefreshToken` and rotated on every refresh. Presenting an already-rotated token revokes every session for that user (reuse detection in `AuthService.refresh`) — except within 10 seconds of the rotation, which is treated as a concurrent refresh (two tabs) and gets a session of its own.
 - `credentials.userId` is `User.id`. Retailer/Distributor are separate profile rows keyed by `userId`; resolve the profile before touching `retailerId`/`distributorId` foreign keys.
 
 ### Search
 
-Product search and suggestions are served entirely from the OpenSearch `products` index, not Postgres. Each document is one `DistributorProduct` (product × distributor) with the distributor's first location as a `geo_point`. Nothing syncs the index automatically — after seeding or changing products, prices, or stock, rerun `npm run search:reindex`. Suggestion kinds (product / brand / distributor) are driven by the `SUGGESTION_SOURCES` table in `search.repository.opensearch.ts`.
+Product search and suggestions are served entirely from the OpenSearch `products` index, not Postgres. Each document is one `DistributorProduct` (product × distributor) with the distributor's first location as a `geo_point`. Nothing syncs the index automatically — after seeding or changing products, prices, or stock, rerun `npm run search:reindex`, which rebuilds the index from scratch (search returns nothing for the moment it takes). The index name and mappings are defined once, in `search.repository.opensearch.ts`, behind the `SearchIndexer` interface; a mapping change takes effect on the next reindex. Suggestion kinds (product / brand / distributor) are driven by the `SUGGESTION_SOURCES` table in `search.repository.opensearch.ts`.
 
 ## Frontend architecture
 

@@ -63,6 +63,10 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
     }
   }
 
+  read<T>(work: (repositories: OrderTransaction) => Promise<T>): Promise<T> {
+    return work(this.transaction());
+  }
+
   protected transaction(): OrderTransaction {
     const state = this.state;
 
@@ -90,7 +94,8 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
         id: order.id,
         date: order.date,
         status: order.status,
-        totalAmount: total(items),
+        // Like the real repository: the total of the whole order.
+        totalAmount: total(order.items),
         rejectionReason: order.rejectionReason,
         createdAt: order.date,
         updatedAt: order.date,

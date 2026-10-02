@@ -1,3 +1,4 @@
+import type { Prisma } from "../../../generated/prisma/client";
 import type { PrismaDb } from "../prisma.client";
 import type { DistributorProductRepository } from "../../../modules/distributorProduct/distributorProduct.repository";
 import type {
@@ -6,6 +7,12 @@ import type {
   DistributorProductWithDistributor,
   DistributorProductWithProduct,
 } from "../../../modules/distributorProduct/distributorProduct.types";
+
+// The distributor of a listing, without the id of the user who owns it.
+const publicDistributor = {
+  omit: { userId: true },
+  include: { locations: true },
+} satisfies Prisma.DistributorDefaultArgs;
 
 export class PrismaDistributorProductRepository
   implements DistributorProductRepository
@@ -17,11 +24,7 @@ export class PrismaDistributorProductRepository
       where: { id },
       include: {
         product: true,
-        distributor: {
-          include: {
-            locations: true,
-          },
-        },
+        distributor: publicDistributor,
       },
     });
 
@@ -58,11 +61,7 @@ export class PrismaDistributorProductRepository
     const results = await this.prisma.distributorProduct.findMany({
       where: { productId },
       include: {
-        distributor: {
-          include: {
-            locations: true,
-          },
-        },
+        distributor: publicDistributor,
       },
     });
 
@@ -76,11 +75,7 @@ export class PrismaDistributorProductRepository
     const results = await this.prisma.distributorProduct.findMany({
       include: {
         product: true,
-        distributor: {
-          include: {
-            locations: true,
-          },
-        },
+        distributor: publicDistributor,
       },
     });
 

@@ -20,24 +20,24 @@ export class DistributorOrderService {
     userId: string,
     status?: OrderStatus,
   ): Promise<DistributorOrderSummary[]> {
-    return this.unitOfWork.run(async (transaction) => {
+    return this.unitOfWork.read(async (repositories) => {
       const distributorId = await this.resolveDistributorId(
-        transaction,
+        repositories,
         userId,
       );
 
-      return transaction.orders.findByDistributorId(distributorId, status);
+      return repositories.orders.findByDistributorId(distributorId, status);
     });
   }
 
   getOrder(userId: string, orderId: string): Promise<DistributorOrderDetails> {
-    return this.unitOfWork.run(async (transaction) => {
+    return this.unitOfWork.read(async (repositories) => {
       const distributorId = await this.resolveDistributorId(
-        transaction,
+        repositories,
         userId,
       );
 
-      return this.findOrder(transaction, orderId, distributorId);
+      return this.findOrder(repositories, orderId, distributorId);
     });
   }
 

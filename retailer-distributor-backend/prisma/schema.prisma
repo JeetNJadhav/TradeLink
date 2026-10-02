@@ -100,6 +100,7 @@ model DistributorProduct {
   orderItems    OrderItem[]
 
   @@unique([distributorId, productId])
+  @@index([productId])
 }
 
 model Order {
@@ -114,6 +115,8 @@ model Order {
   rejectionReason String?
   retailer    Retailer    @relation(fields: [retailerId], references: [id])
   orderItems  OrderItem[]
+
+  @@index([retailerId])
 }
 
 model OrderItem {
@@ -126,6 +129,9 @@ model OrderItem {
   distributorProductId String
   distributorProduct   DistributorProduct @relation(fields: [distributorProductId], references: [id])
   order                Order              @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([distributorProductId])
 }
 
 enum UserRole {

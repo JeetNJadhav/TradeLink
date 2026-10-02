@@ -65,7 +65,13 @@ export class OrderService {
 
         const stockLevels: StockLevel[] = [];
 
-        for (const item of input.items) {
+        // Stock rows are locked in the same order by every order, so two
+        // orders for the same products cannot deadlock each other.
+        const reservations = [...input.items].sort((a, b) =>
+          a.productId < b.productId ? -1 : 1,
+        );
+
+        for (const item of reservations) {
           const remaining = await distributorProducts.reserveStock(
             input.distributorId,
             item.productId,
