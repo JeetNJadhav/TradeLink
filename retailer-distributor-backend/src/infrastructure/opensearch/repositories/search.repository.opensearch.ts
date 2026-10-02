@@ -1,4 +1,4 @@
-import type { Client } from "@opensearch-project/opensearch";
+import type { API, Client } from "@opensearch-project/opensearch";
 import {
   SearchIndexer,
   SearchRepository,
@@ -11,6 +11,41 @@ import {
 } from "../../../modules/search/search.types";
 
 const PRODUCTS_INDEX = "products";
+
+// Documents sent per bulk request when indexing.
+const BULK_BATCH_SIZE = 500;
+
+const PRODUCTS_INDEX_DEFINITION: API.Indices_Create_RequestBody = {
+  settings: {
+    analysis: {
+      normalizer: {
+        // Makes productCategory match whatever the case of the query.
+        category_normalizer: {
+          type: "custom",
+          filter: ["lowercase"],
+        },
+      },
+    },
+  },
+  mappings: {
+    properties: {
+      id: { type: "keyword" },
+      productId: { type: "keyword" },
+      productName: { type: "text" },
+      productCategory: {
+        type: "keyword",
+        normalizer: "category_normalizer",
+      },
+      brand: { type: "text" },
+      distributorId: { type: "keyword" },
+      distributorName: { type: "text" },
+      price: { type: "float" },
+      stock: { type: "integer" },
+      location: { type: "geo_point" },
+      updatedAt: { type: "date" },
+    },
+  },
+};
 
 // Each entry is one kind of suggestion. To suggest on another field, add an entry here.
 interface SuggestionSource {
@@ -50,12 +85,51 @@ interface SuggestionHit {
 export class OpenSearchRepository implements SearchRepository, SearchIndexer {
   constructor(private readonly client: Client) {}
 
-  async indexProductDistributor(document: SearchDocument): Promise<void> {
-    await this.client.index({
+  async createIndex(): Promise<boolean> {
+    const exists = await this.client.indices.exists({ index: PRODUCTS_INDEX });
+
+    if (exists.body) {
+      return false;
+    }
+
+    await this.client.indices.create({
       index: PRODUCTS_INDEX,
-      id: document.id,
-      body: document,
+      body: PRODUCTS_INDEX_DEFINITION,
     });
+
+    return true;
+  }
+
+  async recreateIndex(): Promise<void> {
+    await this.client.indices.delete({
+      index: PRODUCTS_INDEX,
+      ignore_unavailable: true,
+    });
+
+    await this.createIndex();
+  }
+
+  async indexProductDistributors(documents: SearchDocument[]): Promise<void> {
+    for (let start = 0; start < documents.length; start += BULK_BATCH_SIZE) {
+      const batch = documents.slice(start, start + BULK_BATCH_SIZE);
+
+      const response = await this.client.bulk({
+        index: PRODUCTS_INDEX,
+        body: batch.flatMap((document) => [
+          { index: { _id: document.id } },
+          document,
+        ]),
+      });
+
+      // A bulk request succeeds as a whole even when single documents fail.
+      if (response.body.errors) {
+        const failed = response.body.items.find((item) => item.index?.error);
+
+        throw new Error(
+          `Indexing failed: ${failed?.index?.error?.reason ?? "unknown reason"}`,
+        );
+      }
+    }
   }
 
   // productName^3 means product name gets higher relevance.

@@ -11,6 +11,7 @@ export class PrismaDistributorRepository implements DistributorRepository {
 
   async getDistributors(): Promise<DistributorWithLocations[]> {
     const distributors = await this.prisma.distributor.findMany({
+      omit: { userId: true },
       include: {
         locations: true,
       },
@@ -27,6 +28,7 @@ export class PrismaDistributorRepository implements DistributorRepository {
   ): Promise<DistributorWithProducts | null> {
     const distributor = await this.prisma.distributor.findUnique({
       where: { id },
+      omit: { userId: true },
       include: {
         locations: true,
         distributorProducts: {

@@ -21,7 +21,10 @@ export interface Distributor {
   updatedAt: Date;
 }
 
-export interface DistributorWithLocations extends Distributor {
+// A distributor as other users see it: without the id of the user who owns it.
+export type PublicDistributor = Omit<Distributor, "userId">;
+
+export interface DistributorWithLocations extends PublicDistributor {
   locations: DistributorLocation[];
 }
 

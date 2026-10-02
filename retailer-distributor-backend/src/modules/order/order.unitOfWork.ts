@@ -14,7 +14,10 @@ export interface OrderTransaction {
   >;
 }
 
-// Runs the work atomically: if it throws, nothing it wrote is kept.
 export interface OrderUnitOfWork {
+  // Runs the work atomically: if it throws, nothing it wrote is kept.
   run<T>(work: (transaction: OrderTransaction) => Promise<T>): Promise<T>;
+
+  // Runs work that only reads, without opening a transaction.
+  read<T>(work: (repositories: OrderTransaction) => Promise<T>): Promise<T>;
 }

@@ -13,5 +13,12 @@ export interface SearchRepository {
 
 // Write side: used by the indexing scripts.
 export interface SearchIndexer {
-  indexProductDistributor(document: SearchDocument): Promise<void>;
+  // Creates the index with its mappings. Returns false when it already exists.
+  createIndex(): Promise<boolean>;
+
+  // Drops the index and creates it empty, so a reindex leaves no documents
+  // behind for listings that no longer exist.
+  recreateIndex(): Promise<void>;
+
+  indexProductDistributors(documents: SearchDocument[]): Promise<void>;
 }

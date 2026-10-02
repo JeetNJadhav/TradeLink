@@ -6,16 +6,26 @@ import { requireRole } from "../../middleware/authorization";
 import { requireCsrf } from "../../middleware/csrf";
 import { ROUTES } from "../../config/routes";
 
+// Upper bounds keep a request inside what the database columns and one
+// transaction can hold.
+const MAX_ORDER_ITEMS = 100;
+const MAX_ITEM_QUANTITY = 1_000_000;
+
 const createOrderSchema = Joi.object({
   distributorId: Joi.string().guid({ version: "uuidv4" }).required(),
   items: Joi.array()
     .items(
       Joi.object({
         productId: Joi.string().guid({ version: "uuidv4" }).required(),
-        quantity: Joi.number().integer().positive().required(),
+        quantity: Joi.number()
+          .integer()
+          .positive()
+          .max(MAX_ITEM_QUANTITY)
+          .required(),
       }),
     )
     .min(1)
+    .max(MAX_ORDER_ITEMS)
     .required(),
 });
 

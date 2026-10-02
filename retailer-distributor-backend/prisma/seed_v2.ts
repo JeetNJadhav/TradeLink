@@ -1,6 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { Prisma } from "../src/generated/prisma/client";
+import { Prisma, UserRole } from "../src/generated/prisma/client";
+import { BcryptPasswordHasher } from "../src/infrastructure/security/password.service.bcrypt";
 const connectionString = process.env.DATABASE_URL!;
 
 const adapter = new PrismaPg({
@@ -23,6 +24,22 @@ const DISTRIBUTOR_COUNT = 150;
 const LOCATION_COUNT = 800;
 const PRODUCT_COUNT = 1200;
 const DISTRIBUTOR_PRODUCT_COUNT = 6000;
+
+const SEED_PASSWORD = "SeedPassword123!";
+
+// The first users get a retailer profile, the next ones a distributor profile
+// (see the Retailers and Distributors sections). The rest have no profile.
+function roleForUser(index: number): UserRole {
+  if (index < RETAILER_COUNT) {
+    return UserRole.RETAILER;
+  }
+
+  if (index < RETAILER_COUNT + DISTRIBUTOR_COUNT) {
+    return UserRole.DISTRIBUTOR;
+  }
+
+  return UserRole.ADMIN;
+}
 
 /**
  * ---------------------------------------------------------
@@ -774,6 +791,10 @@ async function main() {
 
   console.log(`Creating ${USER_COUNT} users...`);
 
+  // Every seed user signs in with SEED_PASSWORD. It is hashed once, the same
+  // way the login check expects, and the hash is shared by all of them.
+  const passwordHash = await new BcryptPasswordHasher().hash(SEED_PASSWORD);
+
   const users = Array.from({ length: USER_COUNT }, (_, index) => {
     const firstName = randomItem(firstNames);
     const lastName = randomItem(lastNames);
@@ -783,7 +804,8 @@ async function main() {
       name: `${firstName} ${lastName}`,
       phone: `9${String(index + 1).padStart(9, "0")}`,
       email: `user${index + 1}@seed.retaildist.local`,
-      password: "SeedPassword123!",
+      password: passwordHash,
+      role: roleForUser(index),
     };
   });
 

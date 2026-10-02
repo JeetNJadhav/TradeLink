@@ -4,6 +4,7 @@ import { prisma } from "../infrastructure/prisma/prisma.client";
 import { PrismaDistributorProductRepository } from "../infrastructure/prisma/repositories/distributorProduct.repository.prisma";
 import type { DistributorProductRepository } from "../modules/distributorProduct/distributorProduct.repository";
 import type { SearchIndexer } from "../modules/search/search.repository";
+import type { SearchDocument } from "../modules/search/search.types";
 
 const distributorProductRepository: DistributorProductRepository =
   new PrismaDistributorProductRepository(prisma);
@@ -15,6 +16,8 @@ const indexProducts = async () => {
 
   console.log(`Found ${distributorProducts.length} distributor products`);
 
+  const documents: SearchDocument[] = [];
+
   for (const distributorProduct of distributorProducts) {
     const location = distributorProduct.distributor.locations[0];
 
@@ -25,7 +28,7 @@ const indexProducts = async () => {
       continue;
     }
 
-    await searchIndexer.indexProductDistributor({
+    documents.push({
       id: distributorProduct.id,
       productId: distributorProduct.productId,
       productName: distributorProduct.product.name,
@@ -43,7 +46,12 @@ const indexProducts = async () => {
     });
   }
 
-  console.log("Products indexed successfully");
+  // The index is rebuilt from scratch: it gets the current mappings, and
+  // documents of listings that no longer exist are gone.
+  await searchIndexer.recreateIndex();
+  await searchIndexer.indexProductDistributors(documents);
+
+  console.log(`Indexed ${documents.length} products successfully`);
 };
 
 indexProducts()

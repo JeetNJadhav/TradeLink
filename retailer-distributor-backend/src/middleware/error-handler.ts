@@ -17,11 +17,14 @@ export const errorHandler = (
     return errorResponse(h, err.message, err.statusCode);
   }
 
-  console.error(err);
-
-  if (isBoom(err)) {
+  // Hapi's own client errors (validation, unknown route) carry a safe message.
+  if (isBoom(err) && err.output.statusCode < 500) {
     return errorResponse(h, err.message, err.output.statusCode);
   }
+
+  // Anything else is unexpected. Its message may hold internals (a query, a
+  // file path), so it is logged and never sent to the client.
+  console.error(err);
 
   return errorResponse(h, "Internal server error", 500);
 };

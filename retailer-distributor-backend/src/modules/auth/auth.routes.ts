@@ -25,10 +25,6 @@ export const registerAuthRoutes = (
     options: {
       validate: {
         payload: credentialsSchema,
-        failAction: (request, h, err) => {
-          console.log("VALIDATION ERROR:", err?.message);
-          throw err;
-        },
       },
     },
     handler: createLoginHandler(authService),

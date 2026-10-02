@@ -30,6 +30,7 @@ import { JwtTokenService } from "./infrastructure/security/token.service.jwt";
 import { PrismaAuthRepository } from "./infrastructure/prisma/repositories/auth.repository.prisma";
 import {
   ACCESS_TOKEN_TTL,
+  CSRF_HEADER_NAME,
   getJwtSecret,
   REFRESH_TOKEN_TTL_MS,
 } from "./config/auth.config";
@@ -86,7 +87,7 @@ const createApp = async (): Promise<Hapi.Server> => {
       cors: {
         origin: [env.CORS_ORIGIN],
         credentials: true,
-        additionalHeaders: ["X-CSRF-Token"],
+        additionalHeaders: [CSRF_HEADER_NAME],
       },
     },
   });

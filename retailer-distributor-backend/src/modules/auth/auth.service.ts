@@ -1,8 +1,18 @@
 import { AuthError, RefreshTokenReuseError } from "./auth.errors";
 import type { AuthRepository } from "./auth.repository";
-import { AuthenticatedUser, Role, UserRecord } from "./auth.types";
+import {
+  AuthenticatedUser,
+  RefreshSession,
+  Role,
+  UserRecord,
+} from "./auth.types";
 import type { PasswordHasher } from "./password.service";
 import type { TokenService } from "./token.service";
+
+// Two tabs (or a retried request) can present the same refresh token at almost
+// the same moment. Within this window after a rotation that counts as a
+// concurrent refresh; after it, as reuse of a stolen token.
+const REFRESH_REUSE_LEEWAY_MS = 10_000;
 
 const toAuthenticatedUser = (user: {
   id: string;
@@ -30,7 +40,10 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.authRepository.findUserByEmail(email);
+    // Emails are stored lowercase.
+    const user = await this.authRepository.findUserByEmail(
+      email.trim().toLowerCase(),
+    );
 
     if (
       !user ||
@@ -59,36 +72,40 @@ export class AuthService {
   }
 
   async refresh(rawRefreshToken: string) {
-    const session = await this.authRepository.findRefreshSessionByTokenHash(
-      this.tokenService.hashRefreshToken(rawRefreshToken),
-    );
-    if (!session) throw new AuthError("Invalid refresh token");
-    if (session.revokedAt) {
-      if (session.replacedByTokenId)
-        await this.authRepository.revokeAllRefreshTokensForUser(session.userId);
-      throw new AuthError("Refresh token is no longer valid");
-    }
-    if (session.expiresAt <= new Date()) {
-      await this.authRepository.revokeRefreshToken(session.id);
-      throw new AuthError("Refresh token has expired");
-    }
+    const tokenHash = this.tokenService.hashRefreshToken(rawRefreshToken);
+    const session = await this.findUsableRefreshSession(tokenHash);
     const user = await this.authRepository.findUserById(session.userId);
     if (!user) throw new AuthError("User no longer exists");
     const authenticatedUser = toAuthenticatedUser(user);
     const nextRefreshToken = this.tokenService.createRefreshToken();
-    try {
-      await this.authRepository.rotateRefreshSession(
-        session.id,
+
+    if (session.revokedAt) {
+      // Another request rotated this token a moment ago; this one gets a
+      // session of its own.
+      await this.authRepository.createRefreshSession(
         session.userId,
         nextRefreshToken,
       );
-    } catch (error) {
-      if (error instanceof RefreshTokenReuseError) {
-        await this.authRepository.revokeAllRefreshTokensForUser(session.userId);
-        throw new AuthError("Refresh token reuse detected");
+    } else {
+      try {
+        await this.authRepository.rotateRefreshSession(
+          session.id,
+          session.userId,
+          nextRefreshToken,
+        );
+      } catch (error) {
+        if (!(error instanceof RefreshTokenReuseError)) throw error;
+
+        // The token was consumed between the read above and the rotation.
+        // Checking again tells a concurrent refresh apart from a logout.
+        await this.findUsableRefreshSession(tokenHash);
+        await this.authRepository.createRefreshSession(
+          session.userId,
+          nextRefreshToken,
+        );
       }
-      throw error;
     }
+
     return {
       accessToken: this.tokenService.createAccessToken(
         authenticatedUser.userId,
@@ -113,5 +130,36 @@ export class AuthService {
     );
     if (!user) throw new AuthError("User no longer exists");
     return toPublicUser(user);
+  }
+
+  // Returns the session a refresh may continue from. A session that is already
+  // revoked is returned only when it was rotated within the leeway.
+  private async findUsableRefreshSession(
+    tokenHash: string,
+  ): Promise<RefreshSession> {
+    const session =
+      await this.authRepository.findRefreshSessionByTokenHash(tokenHash);
+    if (!session) throw new AuthError("Invalid refresh token");
+
+    if (session.revokedAt) {
+      // Revoked without a replacement: a logout, or an earlier reuse detection.
+      if (!session.replacedByTokenId)
+        throw new AuthError("Refresh token is no longer valid");
+
+      const rotatedAgoMs = Date.now() - session.revokedAt.getTime();
+      if (rotatedAgoMs > REFRESH_REUSE_LEEWAY_MS) {
+        await this.authRepository.revokeAllRefreshTokensForUser(session.userId);
+        throw new AuthError("Refresh token reuse detected");
+      }
+
+      return session;
+    }
+
+    if (session.expiresAt <= new Date()) {
+      await this.authRepository.revokeRefreshToken(session.id);
+      throw new AuthError("Refresh token has expired");
+    }
+
+    return session;
   }
 }
