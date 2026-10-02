@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import BackButton from "../../../../shared/components/BackButton";
 import { ROLE_HOME } from "../../../auth/roleRoutes";
 import DistributorInfo from "../components/DistributorInfo";
 import MoreProducts from "../components/MoreProducts";
@@ -8,17 +9,8 @@ import useDistributorProduct from "../hooks/useDistributorProduct";
 
 const DistributorProductDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const { product, loading, error } = useDistributorProduct(id);
-
-  // "default" is the key of the first entry: the page was opened directly,
-  // so there is nothing in this app to go back to.
-  const goBack = () => {
-    if (location.key === "default") navigate(ROLE_HOME.RETAILER);
-    else navigate(-1);
-  };
 
   let content: ReactNode;
 
@@ -69,9 +61,7 @@ const DistributorProductDetailsPage = () => {
   // The back button sits outside `content` so every state has a way out.
   return (
     <div className="distributor-product-details">
-      <button className="back-button" type="button" onClick={goBack}>
-        ← Back
-      </button>
+      <BackButton fallback={ROLE_HOME.RETAILER} />
 
       {content}
     </div>

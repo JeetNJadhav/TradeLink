@@ -5,6 +5,8 @@ import Login from "../features/auth/pages/Login";
 import WorkspaceUnavailable from "../features/auth/pages/WorkspaceUnavailable";
 import { ROLE_HOME } from "../features/auth/roleRoutes";
 import Distributor from "../features/retailer/catalog/pages/Distributor";
+import DistributorOrders from "../features/distributor/orders/pages/DistributorOrders";
+import DistributorOrderDetails from "../features/distributor/orders/pages/DistributorOrderDetails";
 
 import Products from "../features/retailer/catalog/pages/Products";
 import DistributorProductDetailsPage from "../features/retailer/catalog/pages/DistributorProductDetails";
@@ -34,7 +36,11 @@ export const AppRoutes = () => (
       </Route>
 
       <Route element={<ProtectedRoute roles={["DISTRIBUTOR"]} />}>
-        <Route path={ROLE_HOME.DISTRIBUTOR} element={<WorkspaceUnavailable />} />
+        <Route path={ROLE_HOME.DISTRIBUTOR} element={<DistributorOrders />} />
+        <Route
+          path="/distributor/orders/:orderId"
+          element={<DistributorOrderDetails />}
+        />
       </Route>
 
       <Route element={<ProtectedRoute roles={["ADMIN"]} />}>

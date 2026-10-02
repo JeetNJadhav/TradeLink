@@ -110,6 +110,8 @@ model Order {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   retailerId  String
+  // Set only when the order is REJECTED.
+  rejectionReason String?
   retailer    Retailer    @relation(fields: [retailerId], references: [id])
   orderItems  OrderItem[]
 }

@@ -7,10 +7,10 @@ import type { OrderRepository } from "./order.repository";
 export interface OrderTransaction {
   orders: OrderRepository;
   retailers: RetailerRepository;
-  distributors: Pick<DistributorRepository, "exists">;
+  distributors: Pick<DistributorRepository, "exists" | "findByUserId">;
   distributorProducts: Pick<
     DistributorProductRepository,
-    "findPricing" | "reserveStock"
+    "findPricing" | "reserveStock" | "releaseStock"
   >;
 }
 

@@ -1,3 +1,5 @@
+import BackButton from "../../../../shared/components/BackButton";
+import { ROLE_HOME } from "../../../auth/roleRoutes";
 import ProductCard from "../components/ProductCard";
 import ProductSearch from "../components/ProductSearch";
 import useProductSearch from "../hooks/useProductSearch";
@@ -7,6 +9,8 @@ const Products = () => {
 
   return (
     <div className="products">
+      <BackButton fallback={ROLE_HOME.RETAILER} />
+
       <h1>Search Products</h1>
 
       <ProductSearch onSearch={search} />

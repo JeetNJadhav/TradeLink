@@ -1,9 +1,9 @@
-import { OpenSearchRepository } from "../repositories/opensearch.repository";
-import opensearchClient from "../openSearch.client";
-import { prisma } from "../../prisma/prisma.client";
-import { PrismaDistributorProductRepository } from "../../prisma/repositories/distributorProduct.repository.prisma";
-import type { DistributorProductRepository } from "../../../modules/distributorProduct/distributorProduct.repository";
-import type { SearchIndexer } from "../../../modules/search/search.repository";
+import { OpenSearchRepository } from "../infrastructure/opensearch/repositories/search.repository.opensearch";
+import opensearchClient from "../infrastructure/opensearch/opensearch.client";
+import { prisma } from "../infrastructure/prisma/prisma.client";
+import { PrismaDistributorProductRepository } from "../infrastructure/prisma/repositories/distributorProduct.repository.prisma";
+import type { DistributorProductRepository } from "../modules/distributorProduct/distributorProduct.repository";
+import type { SearchIndexer } from "../modules/search/search.repository";
 
 const distributorProductRepository: DistributorProductRepository =
   new PrismaDistributorProductRepository(prisma);

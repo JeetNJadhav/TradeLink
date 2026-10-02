@@ -19,6 +19,7 @@ const toPublicUser = (user: UserRecord) => ({
   email: user.email,
   phone: user.phone,
   role: user.role,
+  organizationName: user.organizationName,
 });
 
 export class AuthService {

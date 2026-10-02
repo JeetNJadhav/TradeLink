@@ -13,4 +13,19 @@ export const successResponse = (
     .code(statusCode);
 };
 
-// a common response helper
+export const errorResponse = (
+  h: ResponseToolkit,
+  message: string,
+  statusCode: number,
+) => {
+  return h
+    .response({
+      success: false,
+      error: {
+        message,
+      },
+    })
+    .code(statusCode);
+};
+
+// common response helpers

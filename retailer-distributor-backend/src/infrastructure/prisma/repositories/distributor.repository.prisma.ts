@@ -1,6 +1,7 @@
 import type { PrismaDb } from "../prisma.client";
 import type { DistributorRepository } from "../../../modules/distributor/distributor.repository";
 import type {
+  Distributor,
   DistributorWithLocations,
   DistributorWithProducts,
 } from "../../../modules/distributor/distributor.types";
@@ -47,6 +48,12 @@ export class PrismaDistributorRepository implements DistributorRepository {
         price: item.price.toNumber(),
       })),
     };
+  }
+
+  async findByUserId(userId: string): Promise<Distributor | null> {
+    return this.prisma.distributor.findUnique({
+      where: { userId },
+    });
   }
 
   async exists(id: string): Promise<boolean> {

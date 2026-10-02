@@ -1,19 +1,6 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
 import { AppError } from "../utils/errors";
-
-const errorResponse = (
-  h: ResponseToolkit,
-  message: string,
-  statusCode: number,
-) =>
-  h
-    .response({
-      success: false,
-      error: {
-        message,
-      },
-    })
-    .code(statusCode);
+import { errorResponse } from "../utils/response";
 
 const isBoom = (
   err: Error,

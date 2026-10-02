@@ -14,6 +14,8 @@ const nonNegativeNumber = (value: string | undefined, fallback: number) => {
 };
 
 export const env = {
+  // True under `npm run dev`, false in a production build.
+  isDev: import.meta.env.DEV,
   apiUrl: requireEnv("VITE_API_URL", import.meta.env.VITE_API_URL).replace(
     /\/+$/,
     "",

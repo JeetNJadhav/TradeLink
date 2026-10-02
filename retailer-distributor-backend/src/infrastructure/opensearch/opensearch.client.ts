@@ -1,7 +1,8 @@
 import { Client } from "@opensearch-project/opensearch";
+import { env } from "../../config/env";
 
 const opensearchClient = new Client({
-  node: process.env.OPENSEARCH_URL || "http://localhost:9200",
+  node: env.OPENSEARCH_URL,
 });
 
 export default opensearchClient;

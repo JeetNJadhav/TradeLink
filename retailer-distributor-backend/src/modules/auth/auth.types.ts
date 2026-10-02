@@ -11,6 +11,9 @@ export interface UserRecord {
   phone: string;
   password: string;
   role: Role;
+  // The retailer's shop name or the distributor's business name; null for
+  // users without such a profile (e.g. admins).
+  organizationName: string | null;
 }
 
 export interface RefreshSession {

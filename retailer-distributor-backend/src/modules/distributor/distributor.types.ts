@@ -12,13 +12,16 @@ export interface DistributorLocation {
   distributorId: string | null;
 }
 
-export interface DistributorWithLocations {
+export interface Distributor {
   id: string;
   businessName: string;
   contactInfo: string | null;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface DistributorWithLocations extends Distributor {
   locations: DistributorLocation[];
 }
 

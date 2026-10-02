@@ -142,4 +142,18 @@ export class PrismaDistributorProductRepository
 
     return updated[0]?.stock ?? null;
   }
+
+  async releaseStock(
+    distributorProductId: string,
+    quantity: number,
+  ): Promise<void> {
+    await this.prisma.distributorProduct.update({
+      where: { id: distributorProductId },
+      data: {
+        stock: {
+          increment: quantity,
+        },
+      },
+    });
+  }
 }
