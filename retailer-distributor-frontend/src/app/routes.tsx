@@ -2,6 +2,8 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AuthHeader } from "../features/auth/components/AuthHeader";
 import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
 import Login from "../features/auth/pages/Login";
+import Register from "../features/auth/pages/Register";
+import Profile from "../features/profile/pages/Profile";
 import WorkspaceUnavailable from "../features/auth/pages/WorkspaceUnavailable";
 import { ROLE_HOME } from "../features/auth/roleRoutes";
 import Distributor from "../features/retailer/catalog/pages/Distributor";
@@ -21,6 +23,7 @@ const AuthenticatedLayout = () => (
 export const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
 
     <Route element={<AuthenticatedLayout />}>
       <Route element={<ProtectedRoute roles={["RETAILER"]} />}>
@@ -41,6 +44,10 @@ export const AppRoutes = () => (
           path="/distributor/orders/:orderId"
           element={<DistributorOrderDetails />}
         />
+      </Route>
+
+      <Route element={<ProtectedRoute roles={["RETAILER", "DISTRIBUTOR"]} />}>
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["ADMIN"]} />}>

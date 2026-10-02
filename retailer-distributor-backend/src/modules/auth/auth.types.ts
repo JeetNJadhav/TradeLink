@@ -16,6 +16,35 @@ export interface UserRecord {
   organizationName: string | null;
 }
 
+// Roles a person can sign up as. Admins are not self-registered.
+export const REGISTRATION_ROLES = ["RETAILER", "DISTRIBUTOR"] as const;
+export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
+
+export interface AccountLocation {
+  address: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface RegisterInput {
+  role: RegistrationRole;
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  // The retailer's shop name or the distributor's business name.
+  organizationName: string;
+  // Distributors only.
+  contactInfo?: string;
+  location: AccountLocation;
+}
+
+// What gets stored for a new account. The raw password is never persisted.
+export interface NewAccount extends Omit<RegisterInput, "password"> {
+  passwordHash: string;
+}
+
 export interface RefreshSession {
   id: string;
   userId: string;

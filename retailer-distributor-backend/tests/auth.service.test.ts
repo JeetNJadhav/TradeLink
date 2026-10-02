@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { RefreshTokenReuseError } from "../src/modules/auth/auth.errors";
+import {
+  AccountConflictError,
+  RefreshTokenReuseError,
+} from "../src/modules/auth/auth.errors";
 import type { AuthRepository } from "../src/modules/auth/auth.repository";
 import { AuthService } from "../src/modules/auth/auth.service";
 import type {
+  NewAccount,
   RefreshSession,
+  RegisterInput,
   RefreshTokenRecord,
   UserRecord,
 } from "../src/modules/auth/auth.types";
@@ -25,14 +30,54 @@ const user: UserRecord = {
 };
 
 class InMemoryAuthRepository implements AuthRepository {
+  users: UserRecord[] = [{ ...user }];
+  accounts: NewAccount[] = [];
   sessions: StoredSession[] = [];
 
   async findUserByEmail(email: string) {
-    return email === user.email ? user : null;
+    return this.users.find((candidate) => candidate.email === email) ?? null;
   }
 
   async findUserById(userId: string) {
-    return userId === user.id ? user : null;
+    return this.users.find((candidate) => candidate.id === userId) ?? null;
+  }
+
+  async findUserByPhone(phone: string) {
+    return this.users.find((candidate) => candidate.phone === phone) ?? null;
+  }
+
+  async createAccount(account: NewAccount) {
+    const taken = this.users.some(
+      (candidate) =>
+        candidate.email === account.email || candidate.phone === account.phone,
+    );
+
+    if (taken) {
+      throw new AccountConflictError();
+    }
+
+    const created: UserRecord = {
+      id: `user-${this.users.length + 1}`,
+      name: account.name,
+      email: account.email,
+      phone: account.phone,
+      password: account.passwordHash,
+      role: account.role,
+      organizationName: account.organizationName,
+    };
+
+    this.users.push(created);
+    this.accounts.push(account);
+
+    return created;
+  }
+
+  async updatePassword(userId: string, passwordHash: string) {
+    const found = this.users.find((candidate) => candidate.id === userId);
+
+    if (found) {
+      found.password = passwordHash;
+    }
   }
 
   async createRefreshSession(userId: string, token: RefreshTokenRecord) {
@@ -166,6 +211,122 @@ describe("AuthService", () => {
         statusCode: 401,
         message: "Invalid email or password",
       });
+    });
+  });
+
+  describe("register", () => {
+    const registration: RegisterInput = {
+      role: "DISTRIBUTOR",
+      name: "Ravi Distributor",
+      email: "Ravi@Example.com",
+      phone: "9000000002",
+      password: "new-password",
+      organizationName: "Wholesale One",
+      contactInfo: "+91-9000000002",
+      location: {
+        address: "Baner Road, Shop 4",
+        city: "Pune",
+        latitude: 18.559,
+        longitude: 73.7868,
+      },
+    };
+
+    it("creates a distributor account and starts no session", async () => {
+      const created = await service.register(registration);
+
+      expect(created).toEqual({
+        id: "user-2",
+        name: "Ravi Distributor",
+        email: "ravi@example.com",
+        phone: "9000000002",
+        role: "DISTRIBUTOR",
+        organizationName: "Wholesale One",
+      });
+      expect(repository.accounts[0]).toMatchObject({
+        passwordHash: "hashed:new-password",
+        contactInfo: "+91-9000000002",
+        location: registration.location,
+      });
+      expect(repository.accounts[0]).not.toHaveProperty("password");
+      expect(repository.sessions).toHaveLength(0);
+    });
+
+    it("lets the new user sign in with the chosen password", async () => {
+      await service.register(registration);
+
+      const result = await service.login("ravi@example.com", "new-password");
+
+      expect(result.user.role).toBe("DISTRIBUTOR");
+    });
+
+    it("creates a retailer account without contact info", async () => {
+      await service.register({ ...registration, role: "RETAILER" });
+
+      expect(repository.accounts[0].role).toBe("RETAILER");
+      expect(repository.accounts[0].contactInfo).toBeUndefined();
+    });
+
+    it("rejects an email that is already registered, whatever its case", async () => {
+      await expect(
+        service.register({ ...registration, email: "ASHA@example.com" }),
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        message: "Email is already registered",
+      });
+      expect(repository.users).toHaveLength(1);
+    });
+
+    it("rejects a phone number that is already registered", async () => {
+      await expect(
+        service.register({ ...registration, phone: user.phone }),
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        message: "Phone number is already registered",
+      });
+      expect(repository.users).toHaveLength(1);
+    });
+
+    it("reports a sign-up that lost the race for the email as a conflict", async () => {
+      // The checks pass, then another sign-up stores the same email first.
+      repository.findUserByEmail = async () => null;
+
+      await expect(
+        service.register({ ...registration, email: user.email }),
+      ).rejects.toMatchObject({ statusCode: 409 });
+    });
+  });
+
+  describe("changePassword", () => {
+    it("stores the new password and keeps only a new session", async () => {
+      await login();
+      await login();
+
+      const result = await service.changePassword(
+        user.id,
+        "secret-password",
+        "better-password",
+      );
+
+      expect(repository.users[0].password).toBe("hashed:better-password");
+      expect(repository.active()).toHaveLength(1);
+      await expect(service.refresh(result.refreshToken)).resolves.toBeDefined();
+      await expect(login()).rejects.toMatchObject({ statusCode: 401 });
+      await expect(
+        service.login(user.email, "better-password"),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a wrong current password and changes nothing", async () => {
+      await login();
+
+      await expect(
+        service.changePassword(user.id, "wrong-password", "better-password"),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Current password is incorrect",
+      });
+      expect(repository.users[0].password).toBe("hashed:secret-password");
+      expect(repository.active()).toHaveLength(1);
     });
   });
 

@@ -64,9 +64,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      setState({ user, isLoading: false });
+    } catch (error) {
+      // The user shown stays as it was; an ended session is reported by the
+      // API layer through sessionExpired.
+      console.error("Reloading the signed-in user failed", error);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ ...state, login, logout }),
-    [state, login, logout],
+    () => ({ ...state, login, logout, refreshUser }),
+    [state, login, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

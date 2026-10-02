@@ -5,6 +5,11 @@ export const LOGIN_API = "/auth/login";
 export const REFRESH_API = "/auth/refresh";
 export const LOGOUT_API = "/auth/logout";
 export const CURRENT_USER_API = "/auth/me";
+export const REGISTER_API = "/auth/register";
+export const CHANGE_PASSWORD_API = "/auth/password";
+
+// Profile APIs (the signed-in retailer's or distributor's own details)
+export const PROFILE_API = "/profile";
 
 // Product APIs
 export const PRODUCT_SEARCH_API = "/search/q";
