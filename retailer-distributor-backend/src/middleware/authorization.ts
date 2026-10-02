@@ -1,21 +1,13 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
 import { Role } from "../modules/auth/auth.types";
+import { errorResponse } from "../utils/response";
 export const requireRole =
   (...allowedRoles: Role[]) =>
   (request: Request, h: ResponseToolkit) => {
     const user = request.auth.credentials;
     if (!user)
-      return h
-        .response({
-          success: false,
-          error: { message: "Authentication required" },
-        })
-        .code(401)
-        .takeover();
+      return errorResponse(h, "Authentication required", 401).takeover();
     if (!allowedRoles.includes(user.role))
-      return h
-        .response({ success: false, error: { message: "Forbidden" } })
-        .code(403)
-        .takeover();
+      return errorResponse(h, "Forbidden", 403).takeover();
     return h.continue;
   };

@@ -18,3 +18,12 @@ export const DISTRIBUTOR_PRODUCT_DETAILS_API = (id: string) =>
 
 // Order APIs
 export const CREATE_ORDER_API = "/orders";
+
+// Distributor order APIs (orders received by the signed-in distributor)
+export const DISTRIBUTOR_ORDERS_API = "/distributor/orders";
+export const DISTRIBUTOR_ORDER_API = (id: string) =>
+  `/distributor/orders/${id}`;
+export const ACCEPT_ORDER_API = (id: string) =>
+  `/distributor/orders/${id}/accept`;
+export const REJECT_ORDER_API = (id: string) =>
+  `/distributor/orders/${id}/reject`;

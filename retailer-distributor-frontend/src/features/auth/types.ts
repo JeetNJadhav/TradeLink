@@ -8,6 +8,8 @@ export interface AuthUser {
   email: string;
   phone: string;
   role: UserRole;
+  // The retailer's shop name or the distributor's business name.
+  organizationName: string | null;
 }
 
 // Returned by /auth/login and /auth/me. Tokens travel in HttpOnly cookies.

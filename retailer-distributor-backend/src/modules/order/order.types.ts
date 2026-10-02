@@ -34,6 +34,8 @@ export interface Order {
   date: Date;
   totalAmount: string;
   status: OrderStatus;
+  // Set only when the order is REJECTED.
+  rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
   retailerId: string;
@@ -61,4 +63,62 @@ export interface NewOrder {
   retailerId: string;
   status: OrderStatus;
   items: NewOrderItem[];
+}
+
+// ---- Distributor side: the orders a distributor received ----
+
+export interface OrderRetailer {
+  id: string;
+  shopName: string;
+}
+
+// One row of the distributor's order inbox.
+export interface DistributorOrderSummary {
+  id: string;
+  date: Date;
+  status: OrderStatus;
+  totalAmount: string;
+  retailer: OrderRetailer;
+  itemCount: number;
+}
+
+export interface DistributorOrderItem {
+  id: string;
+  quantity: number;
+  unitPrice: string;
+  // unitPrice x quantity, exact.
+  lineTotal: string;
+  distributorProductId: string;
+  product: {
+    id: string;
+    name: string;
+    brand: string;
+  };
+}
+
+// An order as its distributor sees it. `items` holds only that distributor's items.
+export interface DistributorOrderDetails {
+  id: string;
+  date: Date;
+  status: OrderStatus;
+  totalAmount: string;
+  rejectionReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  retailer: OrderRetailer;
+  items: DistributorOrderItem[];
+}
+
+export type RejectOrderInput = {
+  reason: string;
+};
+
+// A status change that only applies while the order is still in `from` and
+// has items from `distributorId`.
+export interface OrderStatusChange {
+  orderId: string;
+  distributorId: string;
+  from: OrderStatus;
+  to: OrderStatus;
+  rejectionReason?: string;
 }

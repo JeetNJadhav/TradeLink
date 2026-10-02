@@ -15,7 +15,4 @@ export const createDistributorService = (
 
   getDistributorProducts: (distributorId: string) =>
     distributorProductRepository.findByDistributorId(distributorId),
-
-  getDistributorProductById: (id: string) =>
-    distributorProductRepository.findById(id),
 });

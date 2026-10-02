@@ -4,10 +4,12 @@
   "description": "Backend for Retailer-Distributor platform",
   "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "search:create-index": "tsx src/scripts/create-products-index.ts",
+    "search:reindex": "tsx src/scripts/index-products.ts",
     "postinstall": "prisma skills sync || exit 0"
   },
   "keywords": [],
@@ -31,6 +33,7 @@
     "@types/pg": "^8.23.1",
     "prisma": "^7.10.0",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   }
 }

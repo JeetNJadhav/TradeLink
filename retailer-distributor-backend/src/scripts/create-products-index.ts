@@ -1,4 +1,4 @@
-import opensearchClient from "./openSearch.client";
+import opensearchClient from "../infrastructure/opensearch/opensearch.client";
 
 const INDEX_NAME = "products";
 

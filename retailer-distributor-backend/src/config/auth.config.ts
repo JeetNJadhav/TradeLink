@@ -1,49 +1,27 @@
 import type { StringValue } from "ms";
-
-const getEnv = (name: string): string => {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`${name} is not configured`);
-  }
-
-  return value;
-};
+import { env } from "./env";
 
 // Tokens
-export const ACCESS_TOKEN_TTL = getEnv("ACCESS_TOKEN_TTL") as StringValue;
-
-const REFRESH_TOKEN_TTL_DAYS = Number(getEnv("REFRESH_TOKEN_TTL_DAYS"));
-
-if (!Number.isFinite(REFRESH_TOKEN_TTL_DAYS) || REFRESH_TOKEN_TTL_DAYS <= 0) {
-  throw new Error("REFRESH_TOKEN_TTL_DAYS must be a positive number");
-}
+export const ACCESS_TOKEN_TTL = env.ACCESS_TOKEN_TTL as StringValue;
 
 export const REFRESH_TOKEN_TTL_MS =
-  REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+  env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
 
-export const getJwtSecret = () => getEnv("JWT_ACCESS_SECRET");
+export const getJwtSecret = () => env.JWT_ACCESS_SECRET;
 
 // Cookies
-export const ACCESS_COOKIE_NAME =
-  process.env.ACCESS_COOKIE_NAME || "accessToken";
+export const ACCESS_COOKIE_NAME = env.ACCESS_COOKIE_NAME;
 
-export const REFRESH_COOKIE_NAME =
-  process.env.REFRESH_COOKIE_NAME || "refreshToken";
+export const REFRESH_COOKIE_NAME = env.REFRESH_COOKIE_NAME;
 
-export const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || "csrfToken";
+export const CSRF_COOKIE_NAME = env.CSRF_COOKIE_NAME;
 
-export const CSRF_HEADER_NAME = process.env.CSRF_HEADER_NAME || "x-csrf-token";
+export const CSRF_HEADER_NAME = env.CSRF_HEADER_NAME;
 
-export const COOKIE_SAME_SITE = (process.env.COOKIE_SAMESITE || "Strict") as
-  | "Strict"
-  | "Lax"
-  | "None";
+export const COOKIE_SAME_SITE = env.COOKIE_SAMESITE;
 
-export const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
+export const COOKIE_SECURE = env.COOKIE_SECURE === "true";
 
-export const ACCESS_COOKIE_MAX_AGE_SECONDS = Number(
-  process.env.ACCESS_TOKEN_TTL_SECONDS || 900,
-);
+export const ACCESS_COOKIE_MAX_AGE_SECONDS = env.ACCESS_TOKEN_TTL_SECONDS;
 
 export const REFRESH_COOKIE_MAX_AGE_SECONDS = REFRESH_TOKEN_TTL_MS / 1000;

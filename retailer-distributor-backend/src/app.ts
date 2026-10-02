@@ -1,5 +1,5 @@
 import Hapi from "@hapi/hapi";
-import "dotenv/config";
+import { env } from "./config/env";
 import { registerProductRoutes } from "./modules/product/product.routes";
 import { errorHandler } from "./middleware/error-handler";
 import { registerDistributorRoutes } from "./modules/distributor/distributor.routes";
@@ -7,8 +7,8 @@ import { registerOrderRoutes } from "./modules/order/order.routes";
 import { registerAuthRoutes } from "./modules/auth/auth.routes";
 
 import { SearchService } from "./modules/search/search.service";
-import opensearchClient from "./infrastructure/opensearch/openSearch.client";
-import { OpenSearchRepository } from "./infrastructure/opensearch/repositories/opensearch.repository";
+import opensearchClient from "./infrastructure/opensearch/opensearch.client";
+import { OpenSearchRepository } from "./infrastructure/opensearch/repositories/search.repository.opensearch";
 import { PrismaDistributorProductRepository } from "./infrastructure/prisma/repositories/distributorProduct.repository.prisma";
 
 import { ProductService } from "./modules/product/product.service";
@@ -16,12 +16,17 @@ import { prisma } from "./infrastructure/prisma/prisma.client";
 import { PrismaDistributorRepository } from "./infrastructure/prisma/repositories/distributor.repository.prisma";
 import { createDistributorService } from "./modules/distributor/distributor.service";
 
+import { DistributorProductService } from "./modules/distributorProduct/distributorProduct.service";
+import { registerDistributorProductRoutes } from "./modules/distributorProduct/distributorProduct.routes";
+
 import { OrderService } from "./modules/order/order.service";
+import { DistributorOrderService } from "./modules/order/distributorOrder.service";
+import { registerDistributorOrderRoutes } from "./modules/order/distributorOrder.routes";
 import { PrismaOrderUnitOfWork } from "./infrastructure/prisma/order.unitOfWork.prisma";
 
 import { AuthService } from "./modules/auth/auth.service";
-import { BcryptPasswordHasher } from "./modules/auth/password.service";
-import { JwtTokenService } from "./modules/auth/token.service";
+import { BcryptPasswordHasher } from "./infrastructure/security/password.service.bcrypt";
+import { JwtTokenService } from "./infrastructure/security/token.service.jwt";
 import { PrismaAuthRepository } from "./infrastructure/prisma/repositories/auth.repository.prisma";
 import {
   ACCESS_TOKEN_TTL,
@@ -50,9 +55,12 @@ const createApp = async (): Promise<Hapi.Server> => {
   const searchRepository = new OpenSearchRepository(opensearchClient);
   const searchService = new SearchService(searchRepository);
 
-  // distributor product (shared by product and distributor modules)
+  // distributor product (its repository is also used by the product and distributor modules)
   const distributorProductRepository = new PrismaDistributorProductRepository(
     prisma,
+  );
+  const distributorProductService = new DistributorProductService(
+    distributorProductRepository,
   );
 
   // product
@@ -67,14 +75,16 @@ const createApp = async (): Promise<Hapi.Server> => {
   );
 
   // order
-  const orderService = new OrderService(new PrismaOrderUnitOfWork(prisma));
+  const orderUnitOfWork = new PrismaOrderUnitOfWork(prisma);
+  const orderService = new OrderService(orderUnitOfWork);
+  const distributorOrderService = new DistributorOrderService(orderUnitOfWork);
 
   const server = Hapi.server({
-    port: 3000,
-    host: "localhost",
+    port: env.PORT,
+    host: env.HOST,
     routes: {
       cors: {
-        origin: ["http://localhost:5173"],
+        origin: [env.CORS_ORIGIN],
         credentials: true,
         additionalHeaders: ["X-CSRF-Token"],
       },
@@ -106,7 +116,9 @@ const createApp = async (): Promise<Hapi.Server> => {
   registerSearchRoutes(server, searchService);
   registerProductRoutes(server, productService);
   registerDistributorRoutes(server, distributorService);
+  registerDistributorProductRoutes(server, distributorProductService);
   registerOrderRoutes(server, orderService);
+  registerDistributorOrderRoutes(server, distributorOrderService);
 
   return server;
 };

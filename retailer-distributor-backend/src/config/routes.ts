@@ -1,8 +1,6 @@
 /**
  * Central place for every HTTP path exposed by the backend.
  *
- * Put this file at: src/config/routes.ts
- *
  * Rules:
  *  - Routes files use these constants instead of string literals.
  *  - `{name}` segments are Hapi path params. The name must match the key
@@ -16,6 +14,7 @@ const PRODUCTS_BASE = "/products";
 const DISTRIBUTORS_BASE = "/distributors";
 const DISTRIBUTOR_PRODUCTS_BASE = "/distributor-products";
 const ORDERS_BASE = "/orders";
+const DISTRIBUTOR_ORDERS_BASE = "/distributor/orders";
 const SEARCH_BASE = "/search";
 
 export const ROUTES = {
@@ -30,8 +29,6 @@ export const ROUTES = {
   },
 
   PRODUCTS: {
-    SEARCH: `${PRODUCTS_BASE}/search`,
-    SUGGESTIONS: `${PRODUCTS_BASE}/suggestions`,
     DISTRIBUTORS: `${PRODUCTS_BASE}/{id}/distributors`, // give me the distributors for this product
   },
 
@@ -45,6 +42,14 @@ export const ROUTES = {
 
   ORDERS: {
     CREATE: ORDERS_BASE,
+  },
+
+  // Orders received by the signed-in distributor.
+  DISTRIBUTOR_ORDERS: {
+    LIST: DISTRIBUTOR_ORDERS_BASE,
+    BY_ID: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}`,
+    ACCEPT: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}/accept`,
+    REJECT: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}/reject`,
   },
 
   SEARCH: {

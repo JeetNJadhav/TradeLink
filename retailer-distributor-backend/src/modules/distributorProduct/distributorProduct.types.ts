@@ -1,14 +1,5 @@
 import type { DistributorWithLocations } from "../distributor/distributor.types";
-
-export interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  brand: string;
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { Product } from "../product/product.types";
 
 // A distributor's listing of a product: its own price and stock.
 export interface DistributorProduct {

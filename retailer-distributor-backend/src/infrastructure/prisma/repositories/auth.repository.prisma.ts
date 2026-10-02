@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../generated/prisma/client";
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client";
 import { RefreshTokenReuseError } from "../../../modules/auth/auth.errors";
 import type { AuthRepository } from "../../../modules/auth/auth.repository";
 import type {
@@ -7,19 +7,44 @@ import type {
   UserRecord,
 } from "../../../modules/auth/auth.types";
 
+// A user has at most one profile; its name is the user's organization name.
+const profileNames = {
+  retailer: { select: { shopName: true } },
+  distributor: { select: { businessName: true } },
+} satisfies Prisma.UserInclude;
+
+type UserWithProfileNames = Prisma.UserGetPayload<{
+  include: typeof profileNames;
+}>;
+
+const toUserRecord = ({
+  retailer,
+  distributor,
+  ...user
+}: UserWithProfileNames): UserRecord => ({
+  ...user,
+  organizationName: retailer?.shopName ?? distributor?.businessName ?? null,
+});
+
 export class PrismaAuthRepository implements AuthRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findUserByEmail(email: string): Promise<UserRecord | null> {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      include: profileNames,
     });
+
+    return user && toUserRecord(user);
   }
 
   async findUserById(userId: string): Promise<UserRecord | null> {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: profileNames,
     });
+
+    return user && toUserRecord(user);
   }
 
   async createRefreshSession(
