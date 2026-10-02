@@ -5,6 +5,7 @@ import { successResponse } from "../../utils/response";
 import { clearAuthCookies, setAuthCookies } from "./auth.cookies";
 import { AuthError } from "./auth.errors";
 import { AuthService } from "./auth.service";
+import type { RegisterInput } from "./auth.types";
 import { generateCsrfToken } from "./csrf.service";
 
 /**
@@ -26,6 +27,50 @@ export const createLoginHandler =
     };
 
     const result = await authService.login(email, password);
+
+    const csrfToken = generateCsrfToken();
+
+    setAuthCookies(h, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      csrfToken,
+    });
+
+    return successResponse(h, { user: result.user, csrfToken });
+  };
+
+/**
+ * REGISTER
+ *
+ * Creates the account and sets no cookies: the new user signs in afterwards.
+ */
+export const createRegisterHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const user = await authService.register(request.payload as RegisterInput);
+
+    return successResponse(h, { user }, 201);
+  };
+
+/**
+ * CHANGE PASSWORD
+ *
+ * Every other session of the user is ended; this one continues on new tokens.
+ */
+export const createChangePasswordHandler =
+  (authService: AuthService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { currentPassword, newPassword } = request.payload as {
+      currentPassword: string;
+      newPassword: string;
+    };
+    const { userId } = request.auth.credentials;
+
+    const result = await authService.changePassword(
+      userId,
+      currentPassword,
+      newPassword,
+    );
 
     const csrfToken = generateCsrfToken();
 

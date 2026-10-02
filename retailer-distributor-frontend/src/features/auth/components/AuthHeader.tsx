@@ -26,7 +26,14 @@ export const AuthHeader = () => {
       >
         <TradeLinkLogo />
       </Link>
-      <span>{identity}</span>
+      {/* Admins have no profile to edit. */}
+      {user.role === "ADMIN" ? (
+        <span>{identity}</span>
+      ) : (
+        <Link className="auth-header-profile" to="/profile" title="Your profile">
+          {identity}
+        </Link>
+      )}
       <button type="button" onClick={() => void logout()}>Logout</button>
     </header>
   );

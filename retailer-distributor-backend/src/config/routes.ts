@@ -10,6 +10,7 @@
 
 // Base prefixes (kept private so groups below stay consistent)
 const AUTH_BASE = "/auth";
+const PROFILE_BASE = "/profile";
 const PRODUCTS_BASE = "/products";
 const DISTRIBUTORS_BASE = "/distributors";
 const DISTRIBUTOR_PRODUCTS_BASE = "/distributor-products";
@@ -26,6 +27,14 @@ export const ROUTES = {
     REFRESH: `${AUTH_BASE}/refresh`,
     LOGOUT: `${AUTH_BASE}/logout`,
     ME: `${AUTH_BASE}/me`,
+    REGISTER: `${AUTH_BASE}/register`,
+    // Under /auth so the refresh cookie is sent with it.
+    PASSWORD: `${AUTH_BASE}/password`,
+  },
+
+  // The signed-in retailer's or distributor's own details.
+  PROFILE: {
+    ME: PROFILE_BASE,
   },
 
   PRODUCTS: {

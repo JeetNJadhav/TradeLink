@@ -67,6 +67,8 @@ Conventions that span files:
 - **Prisma** — Prisma 7 with the `pg` driver adapter. The client is generated into `src/generated/prisma` (gitignored) and imported from there, not from `@prisma/client`. The datasource URL lives in `prisma.config.ts`, not `schema.prisma`. Repositories take `PrismaDb` (root client or transaction client) so the same class works inside a transaction. `Decimal` prices are converted at the repository boundary (`toNumber()` for reads, `toString()` for order pricing).
 - **Transactions** — order creation uses a unit of work: `OrderUnitOfWork` (interface in `modules/order`) is implemented by `PrismaOrderUnitOfWork`, which builds all needed repositories on one `$transaction` client (`run`), or on the root client for work that only reads (`read`). Stock is reserved with a conditional `updateMany` (`stock >= quantity`) so concurrent orders can't oversell; a failed reservation throws and rolls back the order. Reservations are made in `productId` order so concurrent orders can't deadlock.
 - **Order ownership and status** — `Order` deliberately has no `distributorId` (an order may later span several distributors). The distributor is derived through `orderItems → distributorProduct`; the filter lives in one place, `soldBy` in `order.repository.prisma.ts`. Allowed status moves are declared only in `modules/order/order.transitions.ts`. Distributor decisions (`DistributorOrderService`) change status with a conditional `updateMany` on the current status, and a rejection releases the stock reserved at order time.
+- **Profile** — the `profile` module serves the signed-in retailer's or distributor's own details (`GET`/`PUT /profile`): name, phone, shop/business name, contact info (distributors) and the account's first location. Email and role are not editable. The Joi rules for these fields are shared with registration in `src/utils/validation.ts`; the frontend repeats the limits in `src/shared/types/account.ts`.
+- **Unique conflicts** — repositories turn a Prisma unique violation (`isUniqueViolation` in `infrastructure/prisma/prisma.errors.ts`) into a plain domain error (`AccountConflictError`, `ProfileConflictError`), which the service maps to a 409.
 - **DI style** — services are classes with constructor injection, except `distributor.service.ts`, which is deliberately a factory function (`createDistributorService`) kept as a comparison.
 
 ### Auth
@@ -77,6 +79,8 @@ Cookie-based, no bearer tokens:
 - `middleware/authentication.ts` registers the Hapi scheme `access-cookie` / strategy `access-token`, which puts `{ userId, role }` on `request.auth.credentials`. There is no default strategy — each protected route opts in with `options.auth: "access-token"`.
 - Role and CSRF checks are route `pre` handlers: `requireRole("RETAILER")` and `requireCsrf` (double-submit: cookie must equal the `x-csrf-token` header). State-changing routes need both, as in `order.routes.ts`.
 - Refresh tokens are stored hashed in `RefreshToken` and rotated on every refresh. Presenting an already-rotated token revokes every session for that user (reuse detection in `AuthService.refresh`) — except within 10 seconds of the rotation, which is treated as a concurrent refresh (two tabs) and gets a session of its own.
+- Registration (`POST /auth/register`, public) creates the user, its retailer or distributor profile and one location in a single nested create. It sets no cookies — the frontend sends the new user to `/login`. Only `RETAILER` and `DISTRIBUTOR` can register.
+- Changing the password (`POST /auth/password`) revokes every refresh token of the user and starts a new session for the caller, so other devices are signed out. The route is under `/auth` so the refresh cookie is sent with it.
 - `credentials.userId` is `User.id`. Retailer/Distributor are separate profile rows keyed by `userId`; resolve the profile before touching `retailerId`/`distributorId` foreign keys.
 
 ### Search
@@ -86,7 +90,7 @@ Product search and suggestions are served entirely from the OpenSearch `products
 ## Frontend architecture
 
 - `src/app/` — `App.tsx` (`AuthProvider` → `BrowserRouter`) and `routes.tsx`.
-- `src/features/<area>/` — feature folders (`auth`, `retailer/catalog`, `retailer/orders`, `distributor/orders`), each split into `pages/`, `components/`, `hooks/`, `services/`, `types/`.
+- `src/features/<area>/` — feature folders (`auth`, `profile`, `retailer/catalog`, `retailer/orders`, `distributor/orders`), each split into `pages/`, `components/`, `hooks/`, `services/`, `types/`.
 - `src/shared/` — `api/`, `config/env.ts`, `hooks/useAsync.ts`.
 - `src/styles/main.scss` — a single global stylesheet; there are no CSS modules or component-scoped styles.
 
@@ -96,6 +100,7 @@ Data flow is `page → hook → service → apiClient`:
 - **Hooks** wrap a service in `useAsync`. The task passed to `useAsync` must be memoized with `useCallback` (its identity is the cache key; a new identity aborts the previous request), or `null` to stay idle.
 - **`shared/api/apiClient.ts`** owns session handling: it attaches the CSRF header on writes, and on a 401 (or a 403 on a write) performs one shared refresh and retries the request once. Login/refresh/logout calls pass `skipAuthRefresh: true`. When a refresh is rejected with 401 it emits `sessionExpired` through `authEvents.ts`, which `AuthProvider` subscribes to — the API layer never imports auth state. All failures surface as `ApiError`.
 - **Routing by role** — `ProtectedRoute roles={[...]}` guards route groups and redirects a wrong-role user to `ROLE_HOME[role]` (`features/auth/roleRoutes.ts`). The RETAILER area and the DISTRIBUTOR order inbox are built; ADMIN routes render `WorkspaceUnavailable`.
+- **Registration and profile** — `/register` (public) and `/profile` (retailers and distributors) share `shared/components/AccountDetailsFields.tsx`, which holds the name, phone, shop/business and location inputs and the "Use my current location" button. After a profile save the page calls `refreshUser()` from `useAuth` so the header shows the new name.
 - Read configuration through `env` from `shared/config/env.ts`, not `import.meta.env` directly.
 
 TypeScript constraints from `tsconfig.app.json` that affect how code must be written: `erasableSyntaxOnly` (no `enum`, no constructor parameter properties — use union types and explicit fields), `verbatimModuleSyntax` (type-only imports need `import type` / inline `type`), and `noUnusedLocals`/`noUnusedParameters`.

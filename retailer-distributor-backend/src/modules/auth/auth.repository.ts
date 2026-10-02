@@ -1,4 +1,5 @@
 import type {
+  NewAccount,
   RefreshSession,
   RefreshTokenRecord,
   UserRecord,
@@ -8,6 +9,14 @@ export interface AuthRepository {
   findUserByEmail(email: string): Promise<UserRecord | null>;
 
   findUserById(userId: string): Promise<UserRecord | null>;
+
+  findUserByPhone(phone: string): Promise<UserRecord | null>;
+
+  // Stores the user with its retailer or distributor profile and its location,
+  // all or nothing. Throws AccountConflictError if the email or phone is taken.
+  createAccount(account: NewAccount): Promise<UserRecord>;
+
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
 
   createRefreshSession(
     userId: string,

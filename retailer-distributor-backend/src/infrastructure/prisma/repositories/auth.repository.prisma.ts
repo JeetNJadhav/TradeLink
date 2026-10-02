@@ -1,11 +1,17 @@
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client";
-import { RefreshTokenReuseError } from "../../../modules/auth/auth.errors";
+import {
+  AccountConflictError,
+  RefreshTokenReuseError,
+} from "../../../modules/auth/auth.errors";
 import type { AuthRepository } from "../../../modules/auth/auth.repository";
 import type {
+  NewAccount,
   RefreshSession,
   RefreshTokenRecord,
   UserRecord,
 } from "../../../modules/auth/auth.types";
+
+import { isUniqueViolation } from "../prisma.errors";
 
 // A user has at most one profile; its name is the user's organization name.
 const profileNames = {
@@ -45,6 +51,64 @@ export class PrismaAuthRepository implements AuthRepository {
     });
 
     return user && toUserRecord(user);
+  }
+
+  async findUserByPhone(phone: string): Promise<UserRecord | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+      include: profileNames,
+    });
+
+    return user && toUserRecord(user);
+  }
+
+  // A single nested create: the user, its profile and the location are stored
+  // together or not at all.
+  async createAccount(account: NewAccount): Promise<UserRecord> {
+    const locations = { create: account.location };
+
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          name: account.name,
+          email: account.email,
+          phone: account.phone,
+          password: account.passwordHash,
+          role: account.role,
+          ...(account.role === "RETAILER"
+            ? {
+                retailer: {
+                  create: { shopName: account.organizationName, locations },
+                },
+              }
+            : {
+                distributor: {
+                  create: {
+                    businessName: account.organizationName,
+                    contactInfo: account.contactInfo ?? null,
+                    locations,
+                  },
+                },
+              }),
+        },
+        include: profileNames,
+      });
+
+      return toUserRecord(user);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new AccountConflictError();
+      }
+
+      throw error;
+    }
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: passwordHash },
+    });
   }
 
   async createRefreshSession(

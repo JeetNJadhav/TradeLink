@@ -1,8 +1,13 @@
-import { AuthError, RefreshTokenReuseError } from "./auth.errors";
+import {
+  AccountConflictError,
+  AuthError,
+  RefreshTokenReuseError,
+} from "./auth.errors";
 import type { AuthRepository } from "./auth.repository";
 import {
   AuthenticatedUser,
   RefreshSession,
+  RegisterInput,
   Role,
   UserRecord,
 } from "./auth.types";
@@ -51,6 +56,61 @@ export class AuthService {
     )
       throw new AuthError("Invalid email or password");
 
+    return this.startSession(user);
+  }
+
+  // Creates the account only; the new user signs in afterwards.
+  async register(input: RegisterInput) {
+    const { password, ...details } = input;
+    const email = input.email.trim().toLowerCase();
+
+    if (await this.authRepository.findUserByEmail(email))
+      throw new AuthError("Email is already registered", 409);
+    if (await this.authRepository.findUserByPhone(input.phone))
+      throw new AuthError("Phone number is already registered", 409);
+
+    try {
+      const user = await this.authRepository.createAccount({
+        ...details,
+        email,
+        // Retailers have no contact info.
+        contactInfo:
+          input.role === "DISTRIBUTOR" ? input.contactInfo : undefined,
+        passwordHash: await this.passwordHasher.hash(password),
+      });
+
+      return toPublicUser(user);
+    } catch (error) {
+      // Another sign-up took the email or phone after the checks above.
+      if (error instanceof AccountConflictError)
+        throw new AuthError(error.message, 409);
+      throw error;
+    }
+  }
+
+  // Ends every session of the user and starts a new one for the caller, so a
+  // changed password signs out all other devices.
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) throw new AuthError("User no longer exists");
+
+    if (!(await this.passwordHasher.verify(currentPassword, user.password)))
+      throw new AuthError("Current password is incorrect", 400);
+
+    await this.authRepository.updatePassword(
+      user.id,
+      await this.passwordHasher.hash(newPassword),
+    );
+    await this.authRepository.revokeAllRefreshTokensForUser(user.id);
+
+    return this.startSession(user);
+  }
+
+  private async startSession(user: UserRecord) {
     const authenticatedUser = toAuthenticatedUser(user);
 
     const accessToken = this.tokenService.createAccessToken(

@@ -35,6 +35,10 @@ import {
   REFRESH_TOKEN_TTL_MS,
 } from "./config/auth.config";
 
+import { ProfileService } from "./modules/profile/profile.service";
+import { registerProfileRoutes } from "./modules/profile/profile.routes";
+import { PrismaProfileRepository } from "./infrastructure/prisma/repositories/profile.repository.prisma";
+
 import { registerAuthentication } from "./middleware/authentication";
 import { registerSearchRoutes } from "./modules/search/search.routes";
 import { ROUTES } from "./config/routes";
@@ -50,6 +54,11 @@ const createApp = async (): Promise<Hapi.Server> => {
     new PrismaAuthRepository(prisma),
     new BcryptPasswordHasher(),
     tokenService,
+  );
+
+  // profile
+  const profileService = new ProfileService(
+    new PrismaProfileRepository(prisma),
   );
 
   // search
@@ -114,6 +123,7 @@ const createApp = async (): Promise<Hapi.Server> => {
   });
 
   registerAuthRoutes(server, authService);
+  registerProfileRoutes(server, profileService);
   registerSearchRoutes(server, searchService);
   registerProductRoutes(server, productService);
   registerDistributorRoutes(server, distributorService);

@@ -695,6 +695,97 @@ h2 {
   font-size: 12px;
   opacity: 0.7;
 }
+.auth-notice {
+  margin: 0;
+  color: #047857;
+}
+/* The link between the sign-in and registration pages. */
+.auth-switch {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+.auth-card input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.auth-card .secondary-button {
+  border: 1px solid #ccc;
+  background: #fff;
+}
+/* Retailer / distributor choice on the registration page. */
+.role-choice {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  legend {
+    padding: 0 6px;
+    font-weight: 600;
+  }
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+  }
+}
+/* Latitude and longitude side by side. */
+.coordinate-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  input {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   Profile
+   ========================================================= */
+
+.profile-page {
+  width: min(560px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 32px 0 64px;
+  display: grid;
+  gap: 24px;
+  justify-items: start;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+}
+.profile-card {
+  width: 100%;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+.auth-header-profile {
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
 .auth-header {
   display: flex;
   justify-content: flex-end;
