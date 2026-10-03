@@ -1,8 +1,11 @@
-import { DistributorProductRepository } from "../distributorProduct/distributorProduct.repository";
+import type { DistributorProductRepository } from "../distributorProduct/distributorProduct.repository";
 
 export class ProductService {
   constructor(
-    private readonly distributorProductRepository: DistributorProductRepository,
+    private readonly distributorProductRepository: Pick<
+      DistributorProductRepository,
+      "findByProductId"
+    >,
   ) {}
 
   async getProductDistributors(productId: string) {

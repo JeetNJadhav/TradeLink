@@ -5,7 +5,8 @@ import type {
   UserRecord,
 } from "./auth.types";
 
-export interface AuthRepository {
+// Users and their credentials.
+export interface UserAccountRepository {
   findUserByEmail(email: string): Promise<UserRecord | null>;
 
   findUserById(userId: string): Promise<UserRecord | null>;
@@ -16,8 +17,13 @@ export interface AuthRepository {
   // all or nothing. Throws AccountConflictError if the email or phone is taken.
   createAccount(account: NewAccount): Promise<UserRecord>;
 
-  updatePassword(userId: string, passwordHash: string): Promise<void>;
+  // Stores the new password and revokes every refresh token of the user, all
+  // or nothing: a changed password never leaves an old session alive.
+  changePassword(userId: string, passwordHash: string): Promise<void>;
+}
 
+// The refresh tokens behind signed-in sessions.
+export interface RefreshSessionRepository {
   createRefreshSession(
     userId: string,
     token: RefreshTokenRecord,
@@ -39,3 +45,8 @@ export interface AuthRepository {
 
   revokeAllRefreshTokensForUser(userId: string): Promise<void>;
 }
+
+// Both sides in one store, as the Prisma implementation provides them.
+export interface AuthRepository
+  extends UserAccountRepository,
+    RefreshSessionRepository {}

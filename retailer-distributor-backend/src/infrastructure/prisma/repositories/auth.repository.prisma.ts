@@ -104,10 +104,17 @@ export class PrismaAuthRepository implements AuthRepository {
     }
   }
 
-  async updatePassword(userId: string, passwordHash: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: passwordHash },
+  async changePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { password: passwordHash },
+      });
+
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
     });
   }
 

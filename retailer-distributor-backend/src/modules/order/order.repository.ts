@@ -8,7 +8,7 @@ import type {
 } from "./order.types";
 
 export interface OrderRepository {
-  // Stores the order with its items. totalAmount is the exact sum of unitPrice x quantity.
+  // Stores the order with its items.
   create(order: NewOrder): Promise<Order>;
 
   // Orders containing items sold by this distributor, newest first.

@@ -11,6 +11,7 @@ import {
 } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { REGISTRATION_ROLES } from "./auth.types";
+import { RegistrationService } from "./registration.service";
 import { ROUTES } from "../../config/routes";
 import { requireCsrf } from "../../middleware/csrf";
 import {
@@ -52,6 +53,7 @@ const changePasswordSchema = Joi.object({
 export const registerAuthRoutes = (
   server: Server,
   authService: AuthService,
+  registrationService: RegistrationService,
 ) => {
   server.route({
     method: "POST",
@@ -61,7 +63,7 @@ export const registerAuthRoutes = (
         payload: registerSchema,
       },
     },
-    handler: createRegisterHandler(authService),
+    handler: createRegisterHandler(registrationService),
   });
 
   server.route({

@@ -1,5 +1,3 @@
-import type { DistributorProductWithProduct } from "../distributorProduct/distributorProduct.types";
-
 export interface DistributorLocation {
   id: string;
   address: string;
@@ -26,8 +24,4 @@ export type PublicDistributor = Omit<Distributor, "userId">;
 
 export interface DistributorWithLocations extends PublicDistributor {
   locations: DistributorLocation[];
-}
-
-export interface DistributorWithProducts extends DistributorWithLocations {
-  distributorProducts: DistributorProductWithProduct[];
 }

@@ -3,6 +3,7 @@ import opensearchClient from "../infrastructure/opensearch/opensearch.client";
 import { prisma } from "../infrastructure/prisma/prisma.client";
 import { PrismaDistributorProductRepository } from "../infrastructure/prisma/repositories/distributorProduct.repository.prisma";
 import type { DistributorProductRepository } from "../modules/distributorProduct/distributorProduct.repository";
+import { toSearchDocument } from "../modules/search/search.document";
 import type { SearchIndexer } from "../modules/search/search.repository";
 import type { SearchDocument } from "../modules/search/search.types";
 
@@ -19,31 +20,16 @@ const indexProducts = async () => {
   const documents: SearchDocument[] = [];
 
   for (const distributorProduct of distributorProducts) {
-    const location = distributorProduct.distributor.locations[0];
+    const document = toSearchDocument(distributorProduct);
 
-    if (!location) {
+    if (!document) {
       console.warn(
         `Skipping ${distributorProduct.id}: distributor has no location`,
       );
       continue;
     }
 
-    documents.push({
-      id: distributorProduct.id,
-      productId: distributorProduct.productId,
-      productName: distributorProduct.product.name,
-      productCategory: distributorProduct.product.category,
-      brand: distributorProduct.product.brand,
-      distributorId: distributorProduct.distributorId,
-      distributorName: distributorProduct.distributor.businessName,
-      price: distributorProduct.price,
-      stock: distributorProduct.stock,
-      location: {
-        lat: location.latitude,
-        lon: location.longitude,
-      },
-      updatedAt: distributorProduct.updatedAt.toISOString(),
-    });
+    documents.push(document);
   }
 
   // The index is rebuilt from scratch: it gets the current mappings, and

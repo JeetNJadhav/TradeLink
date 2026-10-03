@@ -13,7 +13,6 @@ import { PrismaDistributorProductRepository } from "./infrastructure/prisma/repo
 
 import { ProductService } from "./modules/product/product.service";
 import { prisma } from "./infrastructure/prisma/prisma.client";
-import { PrismaDistributorRepository } from "./infrastructure/prisma/repositories/distributor.repository.prisma";
 import { createDistributorService } from "./modules/distributor/distributor.service";
 
 import { DistributorProductService } from "./modules/distributorProduct/distributorProduct.service";
@@ -25,6 +24,8 @@ import { registerDistributorOrderRoutes } from "./modules/order/distributorOrder
 import { PrismaOrderUnitOfWork } from "./infrastructure/prisma/order.unitOfWork.prisma";
 
 import { AuthService } from "./modules/auth/auth.service";
+import { RegistrationService } from "./modules/auth/registration.service";
+import { SessionService } from "./modules/auth/session.service";
 import { BcryptPasswordHasher } from "./infrastructure/security/password.service.bcrypt";
 import { JwtTokenService } from "./infrastructure/security/token.service.jwt";
 import { PrismaAuthRepository } from "./infrastructure/prisma/repositories/auth.repository.prisma";
@@ -50,10 +51,16 @@ const createApp = async (): Promise<Hapi.Server> => {
     refreshTokenTtlMs: REFRESH_TOKEN_TTL_MS,
     getSecret: getJwtSecret,
   });
+  const authRepository = new PrismaAuthRepository(prisma);
+  const passwordHasher = new BcryptPasswordHasher();
   const authService = new AuthService(
-    new PrismaAuthRepository(prisma),
-    new BcryptPasswordHasher(),
-    tokenService,
+    authRepository,
+    passwordHasher,
+    new SessionService(authRepository, authRepository, tokenService),
+  );
+  const registrationService = new RegistrationService(
+    authRepository,
+    passwordHasher,
   );
 
   // profile
@@ -78,16 +85,17 @@ const createApp = async (): Promise<Hapi.Server> => {
 
   // distributor
   // Using functional DI here to compare it with the class-based approach used by other services.
-  const distributorRepository = new PrismaDistributorRepository(prisma);
   const distributorService = createDistributorService(
-    distributorRepository,
     distributorProductRepository,
   );
 
-  // order
+  // order (the search repository keeps the stock in the index current)
   const orderUnitOfWork = new PrismaOrderUnitOfWork(prisma);
-  const orderService = new OrderService(orderUnitOfWork);
-  const distributorOrderService = new DistributorOrderService(orderUnitOfWork);
+  const orderService = new OrderService(orderUnitOfWork, searchRepository);
+  const distributorOrderService = new DistributorOrderService(
+    orderUnitOfWork,
+    searchRepository,
+  );
 
   const server = Hapi.server({
     port: env.PORT,
@@ -122,7 +130,7 @@ const createApp = async (): Promise<Hapi.Server> => {
     },
   });
 
-  registerAuthRoutes(server, authService);
+  registerAuthRoutes(server, authService, registrationService);
   registerProfileRoutes(server, profileService);
   registerSearchRoutes(server, searchService);
   registerProductRoutes(server, productService);

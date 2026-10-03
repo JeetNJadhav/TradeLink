@@ -1,8 +1,10 @@
 import { OrderError } from "./order.errors";
 import { canTransition } from "./order.transitions";
+import { syncListingStock, type StockIndex } from "./order.stockIndex";
 import type {
   DistributorOrderDetails,
   DistributorOrderSummary,
+  ListingStock,
   OrderStatus,
 } from "./order.types";
 import type { OrderTransaction, OrderUnitOfWork } from "./order.unitOfWork";
@@ -14,7 +16,10 @@ type OrderDecision = {
 
 // What a distributor can do with the orders placed with them.
 export class DistributorOrderService {
-  constructor(private readonly unitOfWork: OrderUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: OrderUnitOfWork,
+    private readonly stockIndex: StockIndex,
+  ) {}
 
   listOrders(
     userId: string,
@@ -60,12 +65,12 @@ export class DistributorOrderService {
     });
   }
 
-  private decide(
+  private async decide(
     userId: string,
     orderId: string,
     decision: OrderDecision,
   ): Promise<DistributorOrderDetails> {
-    return this.unitOfWork.run(async (transaction) => {
+    const { order, released } = await this.unitOfWork.run(async (transaction) => {
       const distributorId = await this.resolveDistributorId(
         transaction,
         userId,
@@ -94,17 +99,29 @@ export class DistributorOrderService {
         );
       }
 
+      const released: ListingStock[] = [];
+
       if (decision.to === "REJECTED") {
         for (const item of order.items) {
-          await transaction.distributorProducts.releaseStock(
-            item.distributorProductId,
-            item.quantity,
-          );
+          released.push({
+            distributorProductId: item.distributorProductId,
+            stock: await transaction.distributorProducts.releaseStock(
+              item.distributorProductId,
+              item.quantity,
+            ),
+          });
         }
       }
 
-      return this.findOrder(transaction, orderId, distributorId);
+      return {
+        order: await this.findOrder(transaction, orderId, distributorId),
+        released,
+      };
     });
+
+    await syncListingStock(this.stockIndex, released);
+
+    return order;
   }
 
   // The authenticated user's id is User.id; orders are matched against their Distributor profile.
