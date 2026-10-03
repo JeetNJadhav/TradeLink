@@ -33,5 +33,6 @@ export interface DistributorProductRepository {
   ): Promise<number | null>;
 
   // Gives reserved stock back to a listing, e.g. when its order is rejected.
-  releaseStock(distributorProductId: string, quantity: number): Promise<void>;
+  // Returns the stock the listing has afterwards.
+  releaseStock(distributorProductId: string, quantity: number): Promise<number>;
 }

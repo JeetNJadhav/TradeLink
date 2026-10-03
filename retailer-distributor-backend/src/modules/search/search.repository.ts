@@ -11,8 +11,12 @@ export interface SearchRepository {
   getProductSuggestions(query: string): Promise<ProductSuggestion[]>;
 }
 
-// Write side: used by the indexing scripts.
+// Write side: used by the indexing scripts, and by orders to keep stock current.
 export interface SearchIndexer {
+  // Sets the stock of one listing's document. Does nothing when the listing
+  // is not in the index.
+  updateStock(distributorProductId: string, stock: number): Promise<void>;
+
   // Creates the index with its mappings. Returns false when it already exists.
   createIndex(): Promise<boolean>;
 

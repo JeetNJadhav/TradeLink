@@ -7,6 +7,7 @@ import {
   DISTRIBUTOR_USER_ID,
   InMemoryOrderUnitOfWork,
   OTHER_DISTRIBUTOR_USER_ID,
+  RecordingStockIndex,
   RETAILER_USER_ID,
 } from "./support/inMemoryOrderUnitOfWork";
 
@@ -24,6 +25,7 @@ class LostRaceUnitOfWork extends InMemoryOrderUnitOfWork {
 
 describe("DistributorOrderService", () => {
   let unitOfWork: InMemoryOrderUnitOfWork;
+  let stockIndex: RecordingStockIndex;
   let service: DistributorOrderService;
   let orderId: string;
 
@@ -33,7 +35,10 @@ describe("DistributorOrderService", () => {
 
   // Leaves a pending order for 3 of product A: stock goes from 10 to 7.
   const placeOrder = async (target: InMemoryOrderUnitOfWork) => {
-    const placed = await new OrderService(target).createOrder(
+    const placed = await new OrderService(
+      target,
+      new RecordingStockIndex(),
+    ).createOrder(
       RETAILER_USER_ID,
       {
         distributorId: "distributor-1",
@@ -46,7 +51,8 @@ describe("DistributorOrderService", () => {
 
   beforeEach(async () => {
     unitOfWork = new InMemoryOrderUnitOfWork(createOrderState());
-    service = new DistributorOrderService(unitOfWork);
+    stockIndex = new RecordingStockIndex();
+    service = new DistributorOrderService(unitOfWork, stockIndex);
     orderId = await placeOrder(unitOfWork);
   });
 
@@ -71,6 +77,7 @@ describe("DistributorOrderService", () => {
     expect(order.status).toBe("ACCEPTED");
     expect(order.rejectionReason).toBeNull();
     expect(stockOf("listing-a")).toBe(7);
+    expect(stockIndex.updates).toEqual([]);
   });
 
   it("rejects a pending order, stores the reason and releases the stock", async () => {
@@ -83,6 +90,9 @@ describe("DistributorOrderService", () => {
     expect(order.status).toBe("REJECTED");
     expect(order.rejectionReason).toBe("Out of delivery range");
     expect(stockOf("listing-a")).toBe(10);
+    expect(stockIndex.updates).toEqual([
+      { distributorProductId: "listing-a", stock: 10 },
+    ]);
   });
 
   it("does not allow a second decision on the same order", async () => {
@@ -121,7 +131,7 @@ describe("DistributorOrderService", () => {
     const racingOrderId = await placeOrder(racing);
 
     await expect(
-      new DistributorOrderService(racing).rejectOrder(
+      new DistributorOrderService(racing, stockIndex).rejectOrder(
         DISTRIBUTOR_USER_ID,
         racingOrderId,
         "No stock",
@@ -129,6 +139,7 @@ describe("DistributorOrderService", () => {
     ).rejects.toMatchObject({ statusCode: 409 });
 
     expect(racing.state.listings[0].stock).toBe(7);
+    expect(stockIndex.updates).toEqual([]);
     expect(racing.state.orders[0].status).toBe("PENDING");
   });
 });

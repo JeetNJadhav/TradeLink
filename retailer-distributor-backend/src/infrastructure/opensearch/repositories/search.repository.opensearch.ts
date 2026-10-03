@@ -132,6 +132,19 @@ export class OpenSearchRepository implements SearchRepository, SearchIndexer {
     }
   }
 
+  // A 404 means the listing (or the whole index) has not been indexed; the
+  // next reindex picks up the current stock.
+  async updateStock(distributorProductId: string, stock: number): Promise<void> {
+    await this.client.update(
+      {
+        index: PRODUCTS_INDEX,
+        id: distributorProductId,
+        body: { doc: { stock } },
+      },
+      { ignore: [404] },
+    );
+  }
+
   // productName^3 means product name gets higher relevance.
   async searchProducts(params: ProductSearchParams): Promise<SearchDocument[]> {
     const { query, latitude, longitude, sortBy } = params;

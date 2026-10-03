@@ -141,14 +141,19 @@ export class PrismaDistributorProductRepository
   async releaseStock(
     distributorProductId: string,
     quantity: number,
-  ): Promise<void> {
-    await this.prisma.distributorProduct.update({
+  ): Promise<number> {
+    const updated = await this.prisma.distributorProduct.update({
       where: { id: distributorProductId },
       data: {
         stock: {
           increment: quantity,
         },
       },
+      select: {
+        stock: true,
+      },
     });
+
+    return updated.stock;
   }
 }

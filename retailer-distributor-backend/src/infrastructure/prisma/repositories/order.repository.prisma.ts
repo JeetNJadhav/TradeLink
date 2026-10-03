@@ -1,5 +1,6 @@
-import { Prisma } from "../../../generated/prisma/client";
+import type { Prisma } from "../../../generated/prisma/client";
 import type { PrismaDb } from "../prisma.client";
+import { lineTotal } from "../../../modules/order/order.money";
 import type { OrderRepository } from "../../../modules/order/order.repository";
 import type {
   DistributorOrderDetails,
@@ -24,16 +25,10 @@ export class PrismaOrderRepository implements OrderRepository {
   constructor(private readonly prisma: PrismaDb) {}
 
   async create(order: NewOrder): Promise<Order> {
-    const totalAmount = order.items.reduce(
-      (total, item) =>
-        total.add(new Prisma.Decimal(item.unitPrice).mul(item.quantity)),
-      new Prisma.Decimal(0),
-    );
-
     const created = await this.prisma.order.create({
       data: {
         retailerId: order.retailerId,
-        totalAmount,
+        totalAmount: order.totalAmount,
         status: order.status,
         orderItems: {
           create: order.items,
@@ -140,7 +135,7 @@ export class PrismaOrderRepository implements OrderRepository {
         id: item.id,
         quantity: item.quantity,
         unitPrice: item.unitPrice.toString(),
-        lineTotal: item.unitPrice.mul(item.quantity).toString(),
+        lineTotal: lineTotal(item.unitPrice.toString(), item.quantity),
         distributorProductId: item.distributorProductId,
         product: item.distributorProduct.product,
       })),

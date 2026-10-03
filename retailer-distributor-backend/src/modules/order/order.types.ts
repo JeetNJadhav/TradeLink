@@ -62,7 +62,15 @@ export interface NewOrderItem {
 export interface NewOrder {
   retailerId: string;
   status: OrderStatus;
+  // The exact sum of unitPrice x quantity, from orderTotal in order.money.ts.
+  totalAmount: string;
   items: NewOrderItem[];
+}
+
+// The stock a listing has left after an order reserved or released some.
+export interface ListingStock {
+  distributorProductId: string;
+  stock: number;
 }
 
 // ---- Distributor side: the orders a distributor received ----

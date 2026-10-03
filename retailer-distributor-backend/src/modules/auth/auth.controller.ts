@@ -7,9 +7,12 @@ import { AuthError } from "./auth.errors";
 import { AuthService } from "./auth.service";
 import type { RegisterInput } from "./auth.types";
 import { generateCsrfToken } from "./csrf.service";
+import { RegistrationService } from "./registration.service";
+
+type Session = Awaited<ReturnType<AuthService["login"]>>;
 
 /**
- * LOGIN
+ * Hands a new session to the browser.
  *
  * Access token  -> HttpOnly cookie
  * Refresh token -> HttpOnly cookie
@@ -17,6 +20,21 @@ import { generateCsrfToken } from "./csrf.service";
  *
  * Access/refresh tokens are NOT returned to React. The CSRF token is, so the
  * client can still send the header when it cannot read the cookie (cross-site).
+ */
+const respondWithSession = (h: ResponseToolkit, session: Session) => {
+  const csrfToken = generateCsrfToken();
+
+  setAuthCookies(h, {
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    csrfToken,
+  });
+
+  return successResponse(h, { user: session.user, csrfToken });
+};
+
+/**
+ * LOGIN
  */
 export const createLoginHandler =
   (authService: AuthService) =>
@@ -26,17 +44,7 @@ export const createLoginHandler =
       password: string;
     };
 
-    const result = await authService.login(email, password);
-
-    const csrfToken = generateCsrfToken();
-
-    setAuthCookies(h, {
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      csrfToken,
-    });
-
-    return successResponse(h, { user: result.user, csrfToken });
+    return respondWithSession(h, await authService.login(email, password));
   };
 
 /**
@@ -45,9 +53,11 @@ export const createLoginHandler =
  * Creates the account and sets no cookies: the new user signs in afterwards.
  */
 export const createRegisterHandler =
-  (authService: AuthService) =>
+  (registrationService: RegistrationService) =>
   async (request: Request, h: ResponseToolkit) => {
-    const user = await authService.register(request.payload as RegisterInput);
+    const user = await registrationService.register(
+      request.payload as RegisterInput,
+    );
 
     return successResponse(h, { user }, 201);
   };
@@ -66,21 +76,10 @@ export const createChangePasswordHandler =
     };
     const { userId } = request.auth.credentials;
 
-    const result = await authService.changePassword(
-      userId,
-      currentPassword,
-      newPassword,
+    return respondWithSession(
+      h,
+      await authService.changePassword(userId, currentPassword, newPassword),
     );
-
-    const csrfToken = generateCsrfToken();
-
-    setAuthCookies(h, {
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      csrfToken,
-    });
-
-    return successResponse(h, { user: result.user, csrfToken });
   };
 
 /**
@@ -103,17 +102,7 @@ export const createRefreshHandler =
         throw new AuthError("Refresh token is required");
       }
 
-      const result = await authService.refresh(refreshToken);
-
-      const csrfToken = generateCsrfToken();
-
-      setAuthCookies(h, {
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        csrfToken,
-      });
-
-      return successResponse(h, { user: result.user, csrfToken });
+      return respondWithSession(h, await authService.refresh(refreshToken));
     } catch (error) {
       // A failed refresh ends the session; the error handler builds the response.
       if (error instanceof AuthError) {

@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Distributor } from "../../src/modules/distributor/distributor.types";
+import { lineTotal } from "../../src/modules/order/order.money";
+import type { StockIndex } from "../../src/modules/order/order.stockIndex";
 import type {
   DistributorOrderDetails,
+  ListingStock,
   NewOrderItem,
   OrderStatus,
 } from "../../src/modules/order/order.types";
@@ -28,6 +31,7 @@ export interface StoredOrder {
   id: string;
   retailerId: string;
   status: OrderStatus;
+  totalAmount: string;
   rejectionReason: string | null;
   date: Date;
   items: StoredOrderItem[];
@@ -40,10 +44,14 @@ export interface OrderState {
   orders: StoredOrder[];
 }
 
-const total = (items: NewOrderItem[]): string =>
-  items
-    .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0)
-    .toFixed(2);
+// Records what the services send to the search index.
+export class RecordingStockIndex implements StockIndex {
+  updates: ListingStock[] = [];
+
+  async updateStock(distributorProductId: string, stock: number) {
+    this.updates.push({ distributorProductId, stock });
+  }
+}
 
 // Keeps everything in memory. Like the real unit of work, a throw inside
 // run() undoes every write made during that run.
@@ -95,7 +103,7 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
         date: order.date,
         status: order.status,
         // Like the real repository: the total of the whole order.
-        totalAmount: total(order.items),
+        totalAmount: order.totalAmount,
         rejectionReason: order.rejectionReason,
         createdAt: order.date,
         updatedAt: order.date,
@@ -109,7 +117,7 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
             id: item.id,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            lineTotal: total([item]),
+            lineTotal: lineTotal(item.unitPrice, item.quantity),
             distributorProductId: item.distributorProductId,
             product: { id: listing.productId, name: "Product", brand: "Brand" },
           };
@@ -167,9 +175,12 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
             (candidate) => candidate.id === distributorProductId,
           );
 
-          if (listing) {
-            listing.stock += quantity;
+          if (!listing) {
+            throw new Error(`Listing ${distributorProductId} not found`);
           }
+
+          listing.stock += quantity;
+          return listing.stock;
         },
       },
 
@@ -186,6 +197,7 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
             id,
             retailerId: order.retailerId,
             status: order.status,
+            totalAmount: order.totalAmount,
             rejectionReason: null,
             date,
             items,
@@ -194,7 +206,7 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
           return {
             id,
             date,
-            totalAmount: total(items),
+            totalAmount: order.totalAmount,
             status: order.status,
             rejectionReason: null,
             createdAt: date,

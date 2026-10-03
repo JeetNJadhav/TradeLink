@@ -13,6 +13,8 @@ import type {
   UserRecord,
 } from "../src/modules/auth/auth.types";
 import type { PasswordHasher } from "../src/modules/auth/password.service";
+import { RegistrationService } from "../src/modules/auth/registration.service";
+import { SessionService } from "../src/modules/auth/session.service";
 import type { TokenService } from "../src/modules/auth/token.service";
 
 interface StoredSession extends RefreshSession {
@@ -72,12 +74,14 @@ class InMemoryAuthRepository implements AuthRepository {
     return created;
   }
 
-  async updatePassword(userId: string, passwordHash: string) {
+  async changePassword(userId: string, passwordHash: string) {
     const found = this.users.find((candidate) => candidate.id === userId);
 
     if (found) {
       found.password = passwordHash;
     }
+
+    await this.revokeAllRefreshTokensForUser(userId);
   }
 
   async createRefreshSession(userId: string, token: RefreshTokenRecord) {
@@ -165,10 +169,16 @@ const createTokenService = (): TokenService => {
 describe("AuthService", () => {
   let repository: InMemoryAuthRepository;
   let service: AuthService;
+  let registration: RegistrationService;
 
   beforeEach(() => {
     repository = new InMemoryAuthRepository();
-    service = new AuthService(repository, passwordHasher, createTokenService());
+    service = new AuthService(
+      repository,
+      passwordHasher,
+      new SessionService(repository, repository, createTokenService()),
+    );
+    registration = new RegistrationService(repository, passwordHasher);
   });
 
   const login = () => service.login(user.email, "secret-password");
@@ -215,7 +225,7 @@ describe("AuthService", () => {
   });
 
   describe("register", () => {
-    const registration: RegisterInput = {
+    const input: RegisterInput = {
       role: "DISTRIBUTOR",
       name: "Ravi Distributor",
       email: "Ravi@Example.com",
@@ -232,7 +242,7 @@ describe("AuthService", () => {
     };
 
     it("creates a distributor account and starts no session", async () => {
-      const created = await service.register(registration);
+      const created = await registration.register(input);
 
       expect(created).toEqual({
         id: "user-2",
@@ -245,14 +255,14 @@ describe("AuthService", () => {
       expect(repository.accounts[0]).toMatchObject({
         passwordHash: "hashed:new-password",
         contactInfo: "+91-9000000002",
-        location: registration.location,
+        location: input.location,
       });
       expect(repository.accounts[0]).not.toHaveProperty("password");
       expect(repository.sessions).toHaveLength(0);
     });
 
     it("lets the new user sign in with the chosen password", async () => {
-      await service.register(registration);
+      await registration.register(input);
 
       const result = await service.login("ravi@example.com", "new-password");
 
@@ -260,7 +270,7 @@ describe("AuthService", () => {
     });
 
     it("creates a retailer account without contact info", async () => {
-      await service.register({ ...registration, role: "RETAILER" });
+      await registration.register({ ...input, role: "RETAILER" });
 
       expect(repository.accounts[0].role).toBe("RETAILER");
       expect(repository.accounts[0].contactInfo).toBeUndefined();
@@ -268,7 +278,7 @@ describe("AuthService", () => {
 
     it("rejects an email that is already registered, whatever its case", async () => {
       await expect(
-        service.register({ ...registration, email: "ASHA@example.com" }),
+        registration.register({ ...input, email: "ASHA@example.com" }),
       ).rejects.toMatchObject({
         statusCode: 409,
         message: "Email is already registered",
@@ -278,7 +288,7 @@ describe("AuthService", () => {
 
     it("rejects a phone number that is already registered", async () => {
       await expect(
-        service.register({ ...registration, phone: user.phone }),
+        registration.register({ ...input, phone: user.phone }),
       ).rejects.toMatchObject({
         statusCode: 409,
         message: "Phone number is already registered",
@@ -291,7 +301,7 @@ describe("AuthService", () => {
       repository.findUserByEmail = async () => null;
 
       await expect(
-        service.register({ ...registration, email: user.email }),
+        registration.register({ ...input, email: user.email }),
       ).rejects.toMatchObject({ statusCode: 409 });
     });
   });
