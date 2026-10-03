@@ -24,6 +24,10 @@ export const DISTRIBUTOR_PRODUCT_DETAILS_API = (id: string) =>
 // Order APIs
 export const CREATE_ORDER_API = "/orders";
 
+// Retailer order APIs (orders placed by the signed-in retailer)
+export const ORDERS_API = "/orders";
+export const ORDER_API = (id: string) => `/orders/${id}`;
+
 // Distributor order APIs (orders received by the signed-in distributor)
 export const DISTRIBUTOR_ORDERS_API = "/distributor/orders";
 export const DISTRIBUTOR_ORDER_API = (id: string) =>

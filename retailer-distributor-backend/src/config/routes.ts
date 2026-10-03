@@ -49,8 +49,11 @@ export const ROUTES = {
     BY_ID: `${DISTRIBUTOR_PRODUCTS_BASE}/{distributorProductId}`,
   },
 
+  // Orders placed by the signed-in retailer.
   ORDERS: {
     CREATE: ORDERS_BASE,
+    LIST: ORDERS_BASE,
+    BY_ID: `${ORDERS_BASE}/{orderId}`,
   },
 
   // Orders received by the signed-in distributor.

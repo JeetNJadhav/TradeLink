@@ -1,4 +1,5 @@
 import type { ApiResponse } from "../../../../shared/api/types";
+import type { OrderLineItem, OrderStatus } from "../../../../shared/orders/types";
 
 export interface CreateOrderItem {
   productId: string;
@@ -10,14 +11,7 @@ export interface CreateOrderRequest {
   items: CreateOrderItem[];
 }
 
-export type OrderStatus =
-  | "PENDING"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "PROCESSING"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+export type { OrderStatus };
 
 // Amounts are exact decimal strings.
 export interface OrderItem {
@@ -49,3 +43,44 @@ export interface PlacedOrder {
 }
 
 export type CreateOrderResponse = ApiResponse<PlacedOrder>;
+
+// ---- The orders the signed-in retailer placed ----
+
+export interface OrderDistributor {
+  id: string;
+  businessName: string;
+}
+
+// One row of the retailer's order list. `distributors` is every distributor
+// the order's items were bought from.
+export interface RetailerOrderSummary {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  totalAmount: string;
+  distributors: OrderDistributor[];
+  itemCount: number;
+}
+
+export interface RetailerOrderItem extends OrderLineItem {
+  distributor: OrderDistributor;
+}
+
+export interface RetailerOrderDetails {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  totalAmount: string;
+  // Set only when the order is REJECTED.
+  rejectionReason: string | null;
+  distributors: OrderDistributor[];
+  items: RetailerOrderItem[];
+}
+
+export type RetailerOrdersResponse = ApiResponse<{
+  orders: RetailerOrderSummary[];
+}>;
+
+export type RetailerOrderResponse = ApiResponse<{
+  order: RetailerOrderDetails;
+}>;

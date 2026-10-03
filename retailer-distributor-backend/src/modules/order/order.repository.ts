@@ -5,6 +5,8 @@ import type {
   Order,
   OrderStatus,
   OrderStatusChange,
+  RetailerOrderDetails,
+  RetailerOrderSummary,
 } from "./order.types";
 
 export interface OrderRepository {
@@ -22,6 +24,18 @@ export interface OrderRepository {
     orderId: string,
     distributorId: string,
   ): Promise<DistributorOrderDetails | null>;
+
+  // Orders placed by this retailer, newest first.
+  findByRetailerId(
+    retailerId: string,
+    status?: OrderStatus,
+  ): Promise<RetailerOrderSummary[]>;
+
+  // Null when the order does not exist or was placed by another retailer.
+  findDetailsForRetailer(
+    orderId: string,
+    retailerId: string,
+  ): Promise<RetailerOrderDetails | null>;
 
   // Applies the change only if the order is still in `from`. Returns false when
   // nothing was updated, e.g. another request changed the status first.

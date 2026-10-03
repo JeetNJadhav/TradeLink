@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Distributor } from "../../src/modules/distributor/distributor.types";
+import { distinctDistributors } from "../../src/modules/order/order.distributors";
 import { lineTotal } from "../../src/modules/order/order.money";
 import type { StockIndex } from "../../src/modules/order/order.stockIndex";
 import type {
@@ -7,6 +8,7 @@ import type {
   ListingStock,
   NewOrderItem,
   OrderStatus,
+  RetailerOrderDetails,
 } from "../../src/modules/order/order.types";
 import type {
   OrderTransaction,
@@ -122,6 +124,45 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
             product: { id: listing.productId, name: "Product", brand: "Brand" },
           };
         }),
+      };
+    };
+
+    // Like the real repository: every item, each with its distributor.
+    const detailsForRetailer = (order: StoredOrder): RetailerOrderDetails => {
+      const items = order.items.map((item) => {
+        const listing = state.listings.find(
+          (candidate) => candidate.id === item.distributorProductId,
+        )!;
+        const distributor = state.distributors.find(
+          (candidate) => candidate.id === listing.distributorId,
+        )!;
+
+        return {
+          id: item.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          lineTotal: lineTotal(item.unitPrice, item.quantity),
+          distributorProductId: item.distributorProductId,
+          product: { id: listing.productId, name: "Product", brand: "Brand" },
+          distributor: {
+            id: distributor.id,
+            businessName: distributor.businessName,
+          },
+        };
+      });
+
+      return {
+        id: order.id,
+        date: order.date,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        rejectionReason: order.rejectionReason,
+        createdAt: order.date,
+        updatedAt: order.date,
+        distributors: distinctDistributors(
+          items.map((item) => item.distributor),
+        ),
+        items,
       };
     };
 
@@ -243,6 +284,29 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
           return order ? detailsFor(order, distributorId) : null;
         },
 
+        findByRetailerId: async (retailerId, status) =>
+          state.orders
+            .filter((order) => order.retailerId === retailerId)
+            .filter((order) => !status || order.status === status)
+            .map(detailsForRetailer)
+            .map((order) => ({
+              id: order.id,
+              date: order.date,
+              status: order.status,
+              totalAmount: order.totalAmount,
+              distributors: order.distributors,
+              itemCount: order.items.length,
+            })),
+
+        findDetailsForRetailer: async (orderId, retailerId) => {
+          const order = state.orders.find(
+            (candidate) =>
+              candidate.id === orderId && candidate.retailerId === retailerId,
+          );
+
+          return order ? detailsForRetailer(order) : null;
+        },
+
         updateStatus: async (change) => {
           const order = state.orders.find(
             (candidate) => candidate.id === change.orderId,
@@ -268,16 +332,24 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
 const now = new Date("2026-01-01T00:00:00Z");
 
 export const RETAILER_USER_ID = "user-retailer";
+export const OTHER_RETAILER_USER_ID = "user-other-retailer";
 export const DISTRIBUTOR_USER_ID = "user-distributor";
 export const OTHER_DISTRIBUTOR_USER_ID = "user-other-distributor";
 
-// One retailer, two distributors. The first distributor lists two products.
+// Two retailers, two distributors. The first distributor lists two products.
 export const createOrderState = (): OrderState => ({
   retailers: [
     {
       id: "retailer-1",
       shopName: "Corner Shop",
       userId: RETAILER_USER_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "retailer-2",
+      shopName: "Market Stall",
+      userId: OTHER_RETAILER_USER_ID,
       createdAt: now,
       updatedAt: now,
     },

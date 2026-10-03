@@ -1,6 +1,7 @@
 import type { Prisma } from "../../../generated/prisma/client";
 import type { PrismaDb } from "../prisma.client";
 import { lineTotal } from "../../../modules/order/order.money";
+import { distinctDistributors } from "../../../modules/order/order.distributors";
 import type { OrderRepository } from "../../../modules/order/order.repository";
 import type {
   DistributorOrderDetails,
@@ -9,6 +10,8 @@ import type {
   Order,
   OrderStatus,
   OrderStatusChange,
+  RetailerOrderDetails,
+  RetailerOrderSummary,
 } from "../../../modules/order/order.types";
 
 // Order has no distributor column: an order belongs to a distributor through
@@ -20,6 +23,15 @@ const itemsSoldBy = (distributorId: string): Prisma.OrderItemWhereInput => ({
 const soldBy = (distributorId: string): Prisma.OrderWhereInput => ({
   orderItems: { some: itemsSoldBy(distributorId) },
 });
+
+// Every retailer check goes through here.
+const placedBy = (retailerId: string): Prisma.OrderWhereInput => ({
+  retailerId,
+});
+
+const distributorSelect = {
+  select: { id: true, businessName: true },
+} satisfies Prisma.DistributorDefaultArgs;
 
 export class PrismaOrderRepository implements OrderRepository {
   constructor(private readonly prisma: PrismaDb) {}
@@ -138,6 +150,102 @@ export class PrismaOrderRepository implements OrderRepository {
         lineTotal: lineTotal(item.unitPrice.toString(), item.quantity),
         distributorProductId: item.distributorProductId,
         product: item.distributorProduct.product,
+      })),
+    };
+  }
+
+  async findByRetailerId(
+    retailerId: string,
+    status?: OrderStatus,
+  ): Promise<RetailerOrderSummary[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        ...placedBy(retailerId),
+        status,
+      },
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        date: true,
+        status: true,
+        totalAmount: true,
+        orderItems: {
+          select: {
+            distributorProduct: {
+              select: { distributor: distributorSelect },
+            },
+          },
+        },
+      },
+    });
+
+    return orders.map(({ orderItems, totalAmount, ...order }) => ({
+      ...order,
+      totalAmount: totalAmount.toString(),
+      distributors: distinctDistributors(
+        orderItems.map((item) => item.distributorProduct.distributor),
+      ),
+      itemCount: orderItems.length,
+    }));
+  }
+
+  async findDetailsForRetailer(
+    orderId: string,
+    retailerId: string,
+  ): Promise<RetailerOrderDetails | null> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        ...placedBy(retailerId),
+      },
+      select: {
+        id: true,
+        date: true,
+        status: true,
+        totalAmount: true,
+        rejectionReason: true,
+        createdAt: true,
+        updatedAt: true,
+        orderItems: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            quantity: true,
+            unitPrice: true,
+            distributorProductId: true,
+            distributorProduct: {
+              select: {
+                product: {
+                  select: { id: true, name: true, brand: true },
+                },
+                distributor: distributorSelect,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    const { orderItems, totalAmount, ...rest } = order;
+
+    return {
+      ...rest,
+      totalAmount: totalAmount.toString(),
+      distributors: distinctDistributors(
+        orderItems.map((item) => item.distributorProduct.distributor),
+      ),
+      items: orderItems.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toString(),
+        lineTotal: lineTotal(item.unitPrice.toString(), item.quantity),
+        distributorProductId: item.distributorProductId,
+        product: item.distributorProduct.product,
+        distributor: item.distributorProduct.distributor,
       })),
     };
   }
