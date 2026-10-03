@@ -2,13 +2,14 @@ import type { DistributorProductWithDetails } from "../distributorProduct/distri
 import type { SearchDocument } from "./search.types";
 
 // The search document of one listing, located at its distributor's first
-// location. Null when the distributor has no location to search by.
+// location. Null when the listing must not be searchable: it was removed, or
+// its distributor has no location to search by.
 export const toSearchDocument = (
   listing: DistributorProductWithDetails,
 ): SearchDocument | null => {
   const location = listing.distributor.locations[0];
 
-  if (!location) {
+  if (!listing.isActive || !location) {
     return null;
   }
 

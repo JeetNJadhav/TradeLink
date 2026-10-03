@@ -139,6 +139,22 @@ describe("OrderService.createOrder", () => {
     expect(unitOfWork.state.orders).toHaveLength(0);
   });
 
+  it("fails when the distributor has removed the listing", async () => {
+    unitOfWork.state.listings.find(
+      (listing) => listing.id === "listing-a",
+    )!.isActive = false;
+
+    await expect(
+      service.createOrder(RETAILER_USER_ID, {
+        distributorId: "distributor-1",
+        items: [{ productId: "product-a", quantity: 1 }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+
+    expect(unitOfWork.state.orders).toHaveLength(0);
+    expect(stockOf("listing-a")).toBe(10);
+  });
+
   it("rolls back the order and earlier reservations when stock runs out", async () => {
     await expect(
       service.createOrder(RETAILER_USER_ID, {

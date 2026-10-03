@@ -145,6 +145,33 @@ export class OpenSearchRepository implements SearchRepository, SearchIndexer {
     );
   }
 
+  // Indexing into a missing index would create it with guessed mappings (no
+  // geo_point). So nothing is written until the index exists; the reindex
+  // that creates it picks the listing up.
+  async upsertListing(document: SearchDocument): Promise<void> {
+    const exists = await this.client.indices.exists({ index: PRODUCTS_INDEX });
+
+    if (!exists.body) {
+      return;
+    }
+
+    await this.client.index({
+      index: PRODUCTS_INDEX,
+      id: document.id,
+      body: document,
+    });
+  }
+
+  async removeListing(distributorProductId: string): Promise<void> {
+    await this.client.delete(
+      {
+        index: PRODUCTS_INDEX,
+        id: distributorProductId,
+      },
+      { ignore: [404] },
+    );
+  }
+
   // productName^3 means product name gets higher relevance.
   async searchProducts(params: ProductSearchParams): Promise<SearchDocument[]> {
     const { query, latitude, longitude, sortBy } = params;

@@ -9,6 +9,8 @@ export const ROLE_HOME: Record<UserRole, string> = {
 };
 
 export const RETAILER_ORDERS_PATH = "/orders";
+// Not below the distributor home, so the "Orders" tab is not active on it.
+export const DISTRIBUTOR_PRODUCTS_PATH = "/my-products";
 
 export interface NavItem {
   label: string;
@@ -23,6 +25,9 @@ export const ROLE_NAV: Record<UserRole, NavItem[]> = {
     { label: "Products", to: ROLE_HOME.RETAILER, end: true },
     { label: "Orders", to: RETAILER_ORDERS_PATH },
   ],
-  DISTRIBUTOR: [{ label: "Orders", to: ROLE_HOME.DISTRIBUTOR }],
+  DISTRIBUTOR: [
+    { label: "Orders", to: ROLE_HOME.DISTRIBUTOR },
+    { label: "Products", to: DISTRIBUTOR_PRODUCTS_PATH },
+  ],
   ADMIN: [],
 };
