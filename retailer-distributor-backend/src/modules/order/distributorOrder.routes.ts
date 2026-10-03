@@ -7,18 +7,10 @@ import {
   rejectOrderHandler,
 } from "./distributorOrder.controller";
 import { DistributorOrderService } from "./distributorOrder.service";
-import { ORDER_STATUSES } from "./order.transitions";
+import { listOrdersQuerySchema, orderParamsSchema } from "./order.validation";
 import { requireRole } from "../../middleware/authorization";
 import { requireCsrf } from "../../middleware/csrf";
 import { ROUTES } from "../../config/routes";
-
-const orderParamsSchema = Joi.object({
-  orderId: Joi.string().guid({ version: "uuidv4" }).required(),
-});
-
-const listOrdersQuerySchema = Joi.object({
-  status: Joi.string().valid(...ORDER_STATUSES),
-});
 
 const rejectOrderSchema = Joi.object({
   reason: Joi.string().trim().min(3).max(500).required(),

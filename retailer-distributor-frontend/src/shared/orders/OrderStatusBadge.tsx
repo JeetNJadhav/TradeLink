@@ -1,4 +1,4 @@
-import type { OrderStatus } from "../types/order";
+import type { OrderStatus } from "./types";
 
 const OrderStatusBadge = ({ status }: { status: OrderStatus }) => (
   <span className={`order-status-badge is-${status.toLowerCase()}`}>

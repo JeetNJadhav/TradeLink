@@ -117,6 +117,41 @@ export interface DistributorOrderDetails {
   items: DistributorOrderItem[];
 }
 
+// ---- Retailer side: the orders a retailer placed ----
+
+export interface OrderDistributor {
+  id: string;
+  businessName: string;
+}
+
+// One row of the retailer's order list. An order has no distributor of its
+// own, so `distributors` is every distributor its items were bought from.
+export interface RetailerOrderSummary {
+  id: string;
+  date: Date;
+  status: OrderStatus;
+  totalAmount: string;
+  distributors: OrderDistributor[];
+  itemCount: number;
+}
+
+export interface RetailerOrderItem extends DistributorOrderItem {
+  distributor: OrderDistributor;
+}
+
+// An order as the retailer who placed it sees it: every item.
+export interface RetailerOrderDetails {
+  id: string;
+  date: Date;
+  status: OrderStatus;
+  totalAmount: string;
+  rejectionReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  distributors: OrderDistributor[];
+  items: RetailerOrderItem[];
+}
+
 export type RejectOrderInput = {
   reason: string;
 };

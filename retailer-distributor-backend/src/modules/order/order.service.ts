@@ -1,5 +1,6 @@
 import { OrderError } from "./order.errors";
 import { orderTotal } from "./order.money";
+import { resolveRetailerId } from "./order.retailer";
 import { syncListingStock, type StockIndex } from "./order.stockIndex";
 import type {
   CreateOrderInput,
@@ -44,7 +45,7 @@ export class OrderService {
 
     const { placed, reservations } = await this.unitOfWork.run(
       async (transaction) => {
-        const retailerId = await this.resolveRetailerId(transaction, userId);
+        const retailerId = await resolveRetailerId(transaction, userId);
 
         if (!(await transaction.distributors.exists(input.distributorId))) {
           throw new OrderError("Distributor not found", 404);
@@ -80,20 +81,6 @@ export class OrderService {
     await syncListingStock(this.stockIndex, reservations);
 
     return placed;
-  }
-
-  // The authenticated user's id is User.id; the order belongs to their Retailer profile.
-  private async resolveRetailerId(
-    transaction: OrderTransaction,
-    userId: string,
-  ): Promise<string> {
-    const retailer = await transaction.retailers.findByUserId(userId);
-
-    if (!retailer) {
-      throw new OrderError("Retailer not found", 404);
-    }
-
-    return retailer.id;
   }
 
   // Prices come from the distributor's listings, never from the request.

@@ -812,6 +812,56 @@ h2 {
     outline-offset: 2px;
   }
 }
+/* Sits beside the logo and takes the free space, keeping the rest on the right. */
+.auth-header-home:has(+ .auth-header-nav) {
+  margin-right: 0;
+}
+.auth-header-nav {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+  margin-left: 12px;
+
+  a {
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #4b5563;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+
+    &:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    &.active {
+      background: #eff6ff;
+      color: #2563eb;
+    }
+  }
+}
+@media (max-width: 600px) {
+  .auth-header {
+    flex-wrap: wrap;
+  }
+
+  /* The tabs drop to a row of their own under the logo. */
+  .auth-header-nav {
+    order: 1;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .auth-header-home:has(+ .auth-header-nav) {
+    margin-right: auto;
+  }
+}
 .tradelink-logo {
   display: inline-flex;
   align-items: center;

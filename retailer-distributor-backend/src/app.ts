@@ -21,6 +21,8 @@ import { registerDistributorProductRoutes } from "./modules/distributorProduct/d
 import { OrderService } from "./modules/order/order.service";
 import { DistributorOrderService } from "./modules/order/distributorOrder.service";
 import { registerDistributorOrderRoutes } from "./modules/order/distributorOrder.routes";
+import { RetailerOrderService } from "./modules/order/retailerOrder.service";
+import { registerRetailerOrderRoutes } from "./modules/order/retailerOrder.routes";
 import { PrismaOrderUnitOfWork } from "./infrastructure/prisma/order.unitOfWork.prisma";
 
 import { AuthService } from "./modules/auth/auth.service";
@@ -96,6 +98,7 @@ const createApp = async (): Promise<Hapi.Server> => {
     orderUnitOfWork,
     searchRepository,
   );
+  const retailerOrderService = new RetailerOrderService(orderUnitOfWork);
 
   const server = Hapi.server({
     port: env.PORT,
@@ -137,6 +140,7 @@ const createApp = async (): Promise<Hapi.Server> => {
   registerDistributorRoutes(server, distributorService);
   registerDistributorProductRoutes(server, distributorProductService);
   registerOrderRoutes(server, orderService);
+  registerRetailerOrderRoutes(server, retailerOrderService);
   registerDistributorOrderRoutes(server, distributorOrderService);
 
   return server;

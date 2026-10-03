@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../../../../shared/api/types";
-import type { OrderStatus } from "../../../retailer/orders/types/order";
+import type { OrderLineItem, OrderStatus } from "../../../../shared/orders/types";
 
 export type { OrderStatus };
 
@@ -18,18 +18,7 @@ export interface DistributorOrderSummary {
   itemCount: number;
 }
 
-export interface DistributorOrderItem {
-  id: string;
-  quantity: number;
-  unitPrice: string;
-  lineTotal: string;
-  distributorProductId: string;
-  product: {
-    id: string;
-    name: string;
-    brand: string;
-  };
-}
+export type DistributorOrderItem = OrderLineItem;
 
 export interface DistributorOrderDetails {
   id: string;

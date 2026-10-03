@@ -7,13 +7,14 @@ import {
   formatOrderDate,
   shortOrderId,
 } from "../../../../shared/orders/orderFormat";
-import { ROLE_HOME } from "../../../auth/roleRoutes";
-import useDistributorOrders from "../hooks/useDistributorOrders";
+import { RETAILER_ORDERS_PATH, ROLE_HOME } from "../../../auth/roleRoutes";
+import useRetailerOrders from "../hooks/useRetailerOrders";
+import { distributorNames } from "../orderDistributors";
 import type { OrderStatus } from "../types/order";
 
-const DistributorOrders = () => {
-  const [status, setStatus] = useState<OrderStatus | undefined>("PENDING");
-  const { orders, loading, error } = useDistributorOrders(status);
+const RetailerOrders = () => {
+  const [status, setStatus] = useState<OrderStatus | undefined>(undefined);
+  const { orders, loading, error } = useRetailerOrders(status);
 
   let content: ReactNode;
 
@@ -25,7 +26,7 @@ const DistributorOrders = () => {
     content = (
       <div className="distributor-empty">
         <h3>No orders here</h3>
-        <p>Orders placed by retailers will show up in this list.</p>
+        <p>Orders you place with distributors will show up in this list.</p>
       </div>
     );
   } else {
@@ -35,14 +36,14 @@ const DistributorOrders = () => {
           <li key={order.id}>
             <Link
               className="orders-row card-link"
-              to={`/distributor/orders/${order.id}`}
+              to={`${RETAILER_ORDERS_PATH}/${order.id}`}
             >
               <span className="orders-row-main">
                 <strong>{shortOrderId(order.id)}</strong>
                 <span>{formatOrderDate(order.date)}</span>
               </span>
 
-              <span>{order.retailer.shopName}</span>
+              <span>{distributorNames(order.distributors)}</span>
 
               <span>
                 {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
@@ -60,11 +61,11 @@ const DistributorOrders = () => {
 
   return (
     <div className="orders-page">
-      <BackButton fallback={ROLE_HOME.DISTRIBUTOR} />
+      <BackButton fallback={ROLE_HOME.RETAILER} />
 
       <div className="distributor-header">
         <h1>Orders</h1>
-        <p>Orders retailers have placed with you</p>
+        <p>Orders you have placed with distributors</p>
       </div>
 
       <OrderStatusFilters status={status} onChange={setStatus} />
@@ -74,4 +75,4 @@ const DistributorOrders = () => {
   );
 };
 
-export default DistributorOrders;
+export default RetailerOrders;

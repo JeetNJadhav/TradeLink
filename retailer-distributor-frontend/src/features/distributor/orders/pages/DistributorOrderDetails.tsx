@@ -1,12 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import BackButton from "../../../../shared/components/BackButton";
+import OrderItemsTable from "../../../../shared/orders/OrderItemsTable";
+import OrderStatusBadge from "../../../../shared/orders/OrderStatusBadge";
+import {
+  formatOrderDate,
+  shortOrderId,
+} from "../../../../shared/orders/orderFormat";
 import { ROLE_HOME } from "../../../auth/roleRoutes";
-import OrderStatusBadge from "../components/OrderStatusBadge";
 import RejectOrderForm from "../components/RejectOrderForm";
 import useDistributorOrder from "../hooks/useDistributorOrder";
 import useOrderDecision from "../hooks/useOrderDecision";
-import { formatOrderDate, shortOrderId } from "../orderFormat";
 
 const DistributorOrderDetails = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -49,38 +53,7 @@ const DistributorOrderDetails = () => {
           <OrderStatusBadge status={order.status} />
         </div>
 
-        <table className="order-items">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Brand</th>
-              <th className="is-numeric">Quantity</th>
-              <th className="is-numeric">Unit Price</th>
-              <th className="is-numeric">Amount</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {order.items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.product.name}</td>
-                <td>{item.product.brand}</td>
-                <td className="is-numeric">{item.quantity}</td>
-                <td className="is-numeric">₹{item.unitPrice}</td>
-                <td className="is-numeric">₹{item.lineTotal}</td>
-              </tr>
-            ))}
-          </tbody>
-
-          <tfoot>
-            <tr>
-              <th colSpan={4} scope="row">
-                Total
-              </th>
-              <td className="is-numeric">₹{order.totalAmount}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <OrderItemsTable items={order.items} totalAmount={order.totalAmount} />
 
         {order.rejectionReason && (
           <div className="order-rejection">

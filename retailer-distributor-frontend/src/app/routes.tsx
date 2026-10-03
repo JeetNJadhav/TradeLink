@@ -5,8 +5,13 @@ import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
 import Profile from "../features/profile/pages/Profile";
 import WorkspaceUnavailable from "../features/auth/pages/WorkspaceUnavailable";
-import { ROLE_HOME } from "../features/auth/roleRoutes";
+import {
+  RETAILER_ORDERS_PATH,
+  ROLE_HOME,
+} from "../features/auth/roleRoutes";
 import Distributor from "../features/retailer/catalog/pages/Distributor";
+import RetailerOrders from "../features/retailer/orders/pages/RetailerOrders";
+import RetailerOrderDetails from "../features/retailer/orders/pages/RetailerOrderDetails";
 import DistributorOrders from "../features/distributor/orders/pages/DistributorOrders";
 import DistributorOrderDetails from "../features/distributor/orders/pages/DistributorOrderDetails";
 
@@ -35,6 +40,11 @@ export const AppRoutes = () => (
         <Route
           path="/distributors/:distributorId/products"
           element={<Distributor />}
+        />
+        <Route path={RETAILER_ORDERS_PATH} element={<RetailerOrders />} />
+        <Route
+          path={`${RETAILER_ORDERS_PATH}/:orderId`}
+          element={<RetailerOrderDetails />}
         />
       </Route>
 
