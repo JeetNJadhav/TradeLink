@@ -16,6 +16,8 @@ const DISTRIBUTORS_BASE = "/distributors";
 const DISTRIBUTOR_PRODUCTS_BASE = "/distributor-products";
 const ORDERS_BASE = "/orders";
 const DISTRIBUTOR_ORDERS_BASE = "/distributor/orders";
+const DISTRIBUTOR_LISTINGS_BASE = "/distributor/products";
+const CATALOG_BASE = "/catalog";
 const SEARCH_BASE = "/search";
 
 export const ROUTES = {
@@ -62,6 +64,18 @@ export const ROUTES = {
     BY_ID: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}`,
     ACCEPT: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}/accept`,
     REJECT: `${DISTRIBUTOR_ORDERS_BASE}/{orderId}/reject`,
+  },
+
+  // The signed-in distributor's own listings.
+  DISTRIBUTOR_LISTINGS: {
+    LIST: DISTRIBUTOR_LISTINGS_BASE,
+    CREATE: DISTRIBUTOR_LISTINGS_BASE,
+    BY_ID: `${DISTRIBUTOR_LISTINGS_BASE}/{distributorProductId}`,
+  },
+
+  // The master product list a distributor picks from when adding a listing.
+  CATALOG: {
+    PRODUCTS: `${CATALOG_BASE}/products`,
   },
 
   SEARCH: {

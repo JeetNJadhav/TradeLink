@@ -23,6 +23,8 @@ export interface Listing {
   productId: string;
   unitPrice: string;
   stock: number;
+  // False once the distributor removed the listing.
+  isActive: boolean;
 }
 
 interface StoredOrderItem extends NewOrderItem {
@@ -188,7 +190,8 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
           const listing = state.listings.find(
             (candidate) =>
               candidate.distributorId === distributorId &&
-              candidate.productId === productId,
+              candidate.productId === productId &&
+              candidate.isActive,
           );
 
           return listing
@@ -200,7 +203,8 @@ export class InMemoryOrderUnitOfWork implements OrderUnitOfWork {
           const listing = state.listings.find(
             (candidate) =>
               candidate.distributorId === distributorId &&
-              candidate.productId === productId,
+              candidate.productId === productId &&
+              candidate.isActive,
           );
 
           if (!listing || listing.stock < quantity) {
@@ -379,6 +383,7 @@ export const createOrderState = (): OrderState => ({
       productId: "product-a",
       unitPrice: "10.50",
       stock: 10,
+      isActive: true,
     },
     {
       id: "listing-b",
@@ -386,6 +391,7 @@ export const createOrderState = (): OrderState => ({
       productId: "product-b",
       unitPrice: "4.00",
       stock: 2,
+      isActive: true,
     },
   ],
   orders: [],

@@ -11,3 +11,13 @@ export const createProductDistributorsHandler =
 
     return successResponse(h, { distributors });
   };
+
+export const createCatalogProductsHandler =
+  (productService: ProductService) =>
+  async (request: Request, h: ResponseToolkit) => {
+    const { q, limit } = request.query as { q?: string; limit: number };
+
+    const products = await productService.searchCatalog(q, limit);
+
+    return successResponse(h, { products });
+  };

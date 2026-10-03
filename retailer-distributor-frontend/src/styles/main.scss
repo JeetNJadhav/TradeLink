@@ -175,6 +175,11 @@ button.suggestion-item:focus-visible {
   outline-offset: -2px;
 }
 
+button.suggestion-item:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
 /* =========================================================
    Product Grid
    ========================================================= */
@@ -967,7 +972,8 @@ h2 {
   letter-spacing: 0.02em;
   white-space: nowrap;
 
-  &.is-pending {
+  &.is-pending,
+  &.is-low-stock {
     background: #fef3c7;
     color: #92400e;
   }
@@ -979,7 +985,8 @@ h2 {
   }
 
   &.is-rejected,
-  &.is-cancelled {
+  &.is-cancelled,
+  &.is-out-of-stock {
     background: #fee2e2;
     color: #991b1b;
   }
@@ -1155,6 +1162,127 @@ h2 {
     display: block;
     overflow-x: auto;
   }
+}
+
+/* =========================================================
+   Distributor Products
+   ========================================================= */
+
+.add-listing-form {
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+
+  h2 {
+    margin: 0 0 14px;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.add-listing-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 16px;
+
+  label {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  input {
+    width: 140px;
+  }
+}
+
+.add-listing-product {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+
+  strong {
+    color: #111827;
+  }
+
+  span {
+    color: #6b7280;
+    font-size: 14px;
+  }
+}
+
+.add-listing-fields input,
+.listings-table input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+
+  &:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 10%);
+  }
+
+  &[aria-invalid="true"] {
+    border-color: #b91c1c;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.listings-table {
+  input {
+    width: 96px;
+    text-align: right;
+  }
+
+  .order-status-badge {
+    display: block;
+    width: fit-content;
+    margin: 6px 0 0 auto;
+  }
+
+  tr.is-stock-out td {
+    background: #fef2f2;
+  }
+
+  tr.is-stock-low td {
+    background: #fffbeb;
+  }
+
+  .order-error {
+    margin: 8px 0 0;
+  }
+}
+
+.listing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .order-action-button {
+    padding: 8px 14px;
+  }
+}
+
+.listing-hint {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 /* =========================================================

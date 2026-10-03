@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-export const useProductSearchDebounce = (value: string, delay: number) => {
+// `value`, once it has stopped changing for `delay` milliseconds.
+export const useDebouncedValue = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {

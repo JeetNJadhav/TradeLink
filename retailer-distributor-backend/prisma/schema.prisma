@@ -91,6 +91,9 @@ model DistributorProduct {
   id            String      @id @default(uuid())
   price         Decimal
   stock         Int
+  // False once the distributor removes the listing. The row stays because
+  // order items refer to it.
+  isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   distributorId String

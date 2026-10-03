@@ -6,6 +6,9 @@ export interface DistributorProduct {
   id: string;
   price: number;
   stock: number;
+  // False once the distributor removed the listing. The row is kept for the
+  // orders placed on it, but it is no longer shown, searched or ordered.
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   distributorId: string;
@@ -23,6 +26,24 @@ export interface DistributorProductWithDistributor extends DistributorProduct {
 export interface DistributorProductWithDetails
   extends DistributorProductWithProduct {
   distributor: DistributorWithLocations;
+}
+
+// ---- A distributor managing its own listings ----
+
+export interface AddListingInput {
+  productId: string;
+  price: number;
+  stock: number;
+}
+
+export interface NewListing extends AddListingInput {
+  distributorId: string;
+}
+
+// Price, stock, or both. A field left out is not changed.
+export interface ListingChanges {
+  price?: number;
+  stock?: number;
 }
 
 // The price is kept as an exact decimal string so order amounts are not rounded.

@@ -17,6 +17,10 @@ import { createDistributorService } from "./modules/distributor/distributor.serv
 
 import { DistributorProductService } from "./modules/distributorProduct/distributorProduct.service";
 import { registerDistributorProductRoutes } from "./modules/distributorProduct/distributorProduct.routes";
+import { DistributorListingService } from "./modules/distributorProduct/distributorListing.service";
+import { registerDistributorListingRoutes } from "./modules/distributorProduct/distributorListing.routes";
+import { PrismaDistributorRepository } from "./infrastructure/prisma/repositories/distributor.repository.prisma";
+import { PrismaProductRepository } from "./infrastructure/prisma/repositories/product.repository.prisma";
 
 import { OrderService } from "./modules/order/order.service";
 import { DistributorOrderService } from "./modules/order/distributorOrder.service";
@@ -82,8 +86,20 @@ const createApp = async (): Promise<Hapi.Server> => {
     distributorProductRepository,
   );
 
+  // a distributor's own listings (the search repository keeps the index current)
+  const productRepository = new PrismaProductRepository(prisma);
+  const distributorListingService = new DistributorListingService(
+    distributorProductRepository,
+    new PrismaDistributorRepository(prisma),
+    productRepository,
+    searchRepository,
+  );
+
   // product
-  const productService = new ProductService(distributorProductRepository);
+  const productService = new ProductService(
+    distributorProductRepository,
+    productRepository,
+  );
 
   // distributor
   // Using functional DI here to compare it with the class-based approach used by other services.
@@ -139,6 +155,7 @@ const createApp = async (): Promise<Hapi.Server> => {
   registerProductRoutes(server, productService);
   registerDistributorRoutes(server, distributorService);
   registerDistributorProductRoutes(server, distributorProductService);
+  registerDistributorListingRoutes(server, distributorListingService);
   registerOrderRoutes(server, orderService);
   registerRetailerOrderRoutes(server, retailerOrderService);
   registerDistributorOrderRoutes(server, distributorOrderService);

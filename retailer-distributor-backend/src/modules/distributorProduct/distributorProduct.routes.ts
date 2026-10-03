@@ -1,12 +1,8 @@
 import { Server } from "@hapi/hapi";
-import Joi from "joi";
 import { createGetDistributorProductByIdHandler } from "./distributorProduct.controller";
 import { DistributorProductService } from "./distributorProduct.service";
+import { distributorProductParamsSchema } from "./distributorProduct.validation";
 import { ROUTES } from "../../config/routes";
-
-const distributorProductParamsSchema = Joi.object({
-  distributorProductId: Joi.string().guid({ version: "uuidv4" }).required(),
-});
 
 export const registerDistributorProductRoutes = (
   server: Server,

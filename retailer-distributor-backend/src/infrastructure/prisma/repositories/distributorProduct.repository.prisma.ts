@@ -1,12 +1,16 @@
 import type { Prisma } from "../../../generated/prisma/client";
 import type { PrismaDb } from "../prisma.client";
+import { ListingConflictError } from "../../../modules/distributorProduct/distributorProduct.errors";
 import type { DistributorProductRepository } from "../../../modules/distributorProduct/distributorProduct.repository";
 import type {
   DistributorProductPricing,
   DistributorProductWithDetails,
   DistributorProductWithDistributor,
   DistributorProductWithProduct,
+  ListingChanges,
+  NewListing,
 } from "../../../modules/distributorProduct/distributorProduct.types";
+import { isUniqueViolation } from "../prisma.errors";
 
 // The distributor of a listing, without the id of the user who owns it.
 const publicDistributor = {
@@ -14,14 +18,20 @@ const publicDistributor = {
   include: { locations: true },
 } satisfies Prisma.DistributorDefaultArgs;
 
+// A listing its distributor has not removed. Removed listings stay in the
+// table for their orders, and are invisible to every read in this file.
+const listed = {
+  isActive: true,
+} satisfies Prisma.DistributorProductWhereInput;
+
 export class PrismaDistributorProductRepository
   implements DistributorProductRepository
 {
   constructor(private readonly prisma: PrismaDb) {}
 
   async findById(id: string): Promise<DistributorProductWithDetails | null> {
-    const distributorProduct = await this.prisma.distributorProduct.findUnique({
-      where: { id },
+    const distributorProduct = await this.prisma.distributorProduct.findFirst({
+      where: { id, ...listed },
       include: {
         product: true,
         distributor: publicDistributor,
@@ -42,10 +52,11 @@ export class PrismaDistributorProductRepository
     distributorId: string,
   ): Promise<DistributorProductWithProduct[]> {
     const results = await this.prisma.distributorProduct.findMany({
-      where: { distributorId },
+      where: { distributorId, ...listed },
       include: {
         product: true,
       },
+      orderBy: [{ product: { name: "asc" } }, { id: "asc" }],
     });
 
     return results.map((item) => ({
@@ -59,7 +70,7 @@ export class PrismaDistributorProductRepository
     productId: string,
   ): Promise<DistributorProductWithDistributor[]> {
     const results = await this.prisma.distributorProduct.findMany({
-      where: { productId },
+      where: { productId, ...listed },
       include: {
         distributor: publicDistributor,
       },
@@ -73,6 +84,7 @@ export class PrismaDistributorProductRepository
 
   async findAllWithDetails(): Promise<DistributorProductWithDetails[]> {
     const results = await this.prisma.distributorProduct.findMany({
+      where: listed,
       include: {
         product: true,
         distributor: publicDistributor,
@@ -89,13 +101,8 @@ export class PrismaDistributorProductRepository
     distributorId: string,
     productId: string,
   ): Promise<DistributorProductPricing | null> {
-    const distributorProduct = await this.prisma.distributorProduct.findUnique({
-      where: {
-        distributorId_productId: {
-          distributorId,
-          productId,
-        },
-      },
+    const distributorProduct = await this.prisma.distributorProduct.findFirst({
+      where: { distributorId, productId, ...listed },
     });
 
     if (!distributorProduct) {
@@ -121,6 +128,7 @@ export class PrismaDistributorProductRepository
       where: {
         distributorId,
         productId,
+        ...listed,
         stock: {
           gte: quantity,
         },
@@ -155,5 +163,61 @@ export class PrismaDistributorProductRepository
     });
 
     return updated.stock;
+  }
+
+  async create(listing: NewListing): Promise<string> {
+    const { distributorId, productId, price, stock } = listing;
+
+    // The row of a removed listing is reused, so its past orders and the
+    // one-listing-per-product constraint both stay intact.
+    const relisted = await this.prisma.distributorProduct.updateManyAndReturn({
+      where: { distributorId, productId, isActive: false },
+      data: { price, stock, isActive: true },
+      select: { id: true },
+    });
+
+    if (relisted[0]) {
+      return relisted[0].id;
+    }
+
+    try {
+      const created = await this.prisma.distributorProduct.create({
+        data: { distributorId, productId, price, stock },
+        select: { id: true },
+      });
+
+      return created.id;
+    } catch (error) {
+      // The only unique value is the distributor and product pair.
+      if (isUniqueViolation(error)) {
+        throw new ListingConflictError();
+      }
+
+      throw error;
+    }
+  }
+
+  // One UPDATE: PostgreSQL applies it and a concurrent reserveStock or
+  // releaseStock one after the other, never from a stale read.
+  async updateOwned(
+    id: string,
+    distributorId: string,
+    changes: ListingChanges,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.distributorProduct.updateMany({
+      where: { id, distributorId, ...listed },
+      data: { price: changes.price, stock: changes.stock },
+    });
+
+    return count > 0;
+  }
+
+  async deactivateOwned(id: string, distributorId: string): Promise<boolean> {
+    const { count } = await this.prisma.distributorProduct.updateMany({
+      where: { id, distributorId, ...listed },
+      data: { isActive: false },
+    });
+
+    return count > 0;
   }
 }

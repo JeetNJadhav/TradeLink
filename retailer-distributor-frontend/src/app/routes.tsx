@@ -6,9 +6,11 @@ import Register from "../features/auth/pages/Register";
 import Profile from "../features/profile/pages/Profile";
 import WorkspaceUnavailable from "../features/auth/pages/WorkspaceUnavailable";
 import {
+  DISTRIBUTOR_PRODUCTS_PATH,
   RETAILER_ORDERS_PATH,
   ROLE_HOME,
 } from "../features/auth/roleRoutes";
+import DistributorProducts from "../features/distributor/products/pages/DistributorProducts";
 import Distributor from "../features/retailer/catalog/pages/Distributor";
 import RetailerOrders from "../features/retailer/orders/pages/RetailerOrders";
 import RetailerOrderDetails from "../features/retailer/orders/pages/RetailerOrderDetails";
@@ -53,6 +55,10 @@ export const AppRoutes = () => (
         <Route
           path="/distributor/orders/:orderId"
           element={<DistributorOrderDetails />}
+        />
+        <Route
+          path={DISTRIBUTOR_PRODUCTS_PATH}
+          element={<DistributorProducts />}
         />
       </Route>
 

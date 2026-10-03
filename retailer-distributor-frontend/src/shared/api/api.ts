@@ -36,3 +36,11 @@ export const ACCEPT_ORDER_API = (id: string) =>
   `/distributor/orders/${id}/accept`;
 export const REJECT_ORDER_API = (id: string) =>
   `/distributor/orders/${id}/reject`;
+
+// Distributor listing APIs (the signed-in distributor's own listings)
+export const DISTRIBUTOR_LISTINGS_API = "/distributor/products";
+export const DISTRIBUTOR_LISTING_API = (id: string) =>
+  `/distributor/products/${id}`;
+
+// Catalog APIs (the master product list a distributor lists products from)
+export const CATALOG_PRODUCTS_API = "/catalog/products";

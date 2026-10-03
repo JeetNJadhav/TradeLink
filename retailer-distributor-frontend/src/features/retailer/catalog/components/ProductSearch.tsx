@@ -7,7 +7,7 @@ import useProductSuggestions, {
   MIN_SUGGESTION_LENGTH,
 } from "../hooks/useProductSuggestions";
 import ProductSuggestions from "./ProductSuggestions";
-import { useProductSearchDebounce } from "../hooks/useProductSearchDebounce";
+import { useDebouncedValue } from "../../../../shared/hooks/useDebouncedValue";
 import { SUGGESTION_ACTIONS } from "../suggestionActions";
 
 interface ProductSearchProps {
@@ -19,10 +19,7 @@ const ProductSearch = ({ onSearch }: ProductSearchProps) => {
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const debouncedValue = useProductSearchDebounce(
-    search,
-    env.suggestionDebounceMs,
-  );
+  const debouncedValue = useDebouncedValue(search, env.suggestionDebounceMs);
 
   const { suggestions, loading: searchingSuggestions } =
     useProductSuggestions(debouncedValue);
